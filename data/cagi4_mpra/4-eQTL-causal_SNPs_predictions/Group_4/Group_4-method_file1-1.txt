@@ -1,0 +1,15 @@
+eQTL MPRA prediction challenge, task 1
+Gifford lab, MIT CSAIL
+
+Sequence-based features were generated for the candidate regulatory
+regions given in the challenge.  First, probe sequences were obtained
+for both studied alleles.  For the set of sequences, motif features
+based on known transcription factor binding patterns from ChIP-seq and
+PBM datasets were created.  Several approaches were used for this
+task, including KSM, DeepSea, and DeepBind.  Chromatin state
+annotations from the NIH Roadmap Epigenomics project were compiled for
+all regions.  This compendium of features was used by an ensemble of
+regularized regression and classification models to predict expression
+values and regulatory hit status.  All learning algorithms were tuned
+by cross-validation.  An ensemble of learning algorithms was combined
+to produce the final predictions and confidence estimates.
