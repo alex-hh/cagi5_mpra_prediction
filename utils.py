@@ -1,4 +1,6 @@
 import pysam
+import numpy as np
+
 
 def get_sequences(df, which_set='cagi4'):
   """
@@ -52,3 +54,80 @@ def get_sequences(df, which_set='cagi4'):
     dnastr = genome_open.fetch(row['chr'], enhancer_start, enhancer_end).upper()
 
   return ref_sequences, alt_sequences
+
+def encode_strings(dnastrs, dims=['A', 'G', 'C', 'T']):
+  """
+  dnastrs: a list of dnastrings, all of the same length, or a single string
+  """
+  if type(dnastrs) == str:
+    arr = np.zeros((len(dnastrs),4))
+    for j, c in enumerate(dnastrs):
+      if c in dims:
+        arr[j, dims.index(c)] = 1
+  else:
+    seqlen = len(dnastrs[0])
+    arr = np.zeros((len(dnastrs), seqlen, 4))   
+    for i, dnastr in enumerate(dnastrs):
+        assert len(dnastr) == seqlen
+        for j, c in enumerate(dnastr):
+          if c in dims:
+            arr[i, j, dims.index(c)] = 1
+  return arr
+
+def snp_feats_from_preds(ref_preds, alt_preds, feattypes=[]):
+  # todo: could multiply the difference by the max of the preds 'scalediff': a difference to an 'on' feature is more significant than a difference to an off feature
+  calculated_feats = []
+  if 'absdiff' in feattypes:
+    abs_diff_feats = np.abs(ref_preds-alt_preds)
+    calculated_feats.append(abs_diff_feats)
+  if 'diff' in feattypes:
+    calculated_feats.append(ref_preds-alt_preds)
+  if 'scaleddiff' in feattypes:
+    calculated_feats.append(np.abs((ref_preds-alt_preds)*np.max(np.stack((ref_preds, alt_preds), axis=-1), axis=2)))
+  if 'absodds' in feattypes or 'odds' in feattypes:
+    clipped_ref = np.clip(ref_preds, 1e-7, 1-1e-7)
+    clipped_alt = np.clip(alt_preds, 1e-7, 1-1e-7)
+    odds_ref = clipped_ref/(1-clipped_ref)
+    odds_alt = clipped_alt/(1-clipped_alt)
+    log_odds_ratio = np.log2(odds_ref/odds_alt)
+    if 'absodds' in feattypes:
+      calculated_feats.append(np.abs(log_odds_ratio))
+    if 'odds' in feattypes:
+      calculated_feats.append(log_odds_ratio)
+  return np.concatenate(calculated_feats, axis=1)
+
+def encode_sequences(sequences, seqlen=None):
+  # N.B. that the fact that Basenji, for example, does binned predictions should mean that
+  # it actually can be applied to variable length sequences
+  preprocessed_seqs = []
+  if seqlen is None:
+    # just encode without padding
+    preprocessed_seqs = sequences
+  else:
+    for seq in sequences:
+      assert seqlen > len(seq)
+      pad_left = (seqlen - len(seq))//2
+      pad_right = seqlen - (len(seq) + pad_left)
+      seq = 'N'*pad_left + seq + 'N'*pad_right
+      assert len(seq) == seqlen
+      preprocessed_seqs.append(seq)
+
+  return encode_strings(preprocessed_seqs)
+
+def features_from_df(df, seqlen=None, seqreptype='deepsea',
+                     compfeattype='absdiff',
+                     use_gpu=False):
+  if 'ref_sequence' not in df.columns:
+    ref_sequences, alt_sequences = get_sequences(df, which_set='cagi4')
+  else:
+    ref_sequences = df['ref_sequence']
+    alt_sequences = df['alt_sequence']
+  ref_onehot = encode_sequences(ref_sequences, seqlen=seqlen)
+  alt_onehot = encode_sequences(alt_sequences, seqlen=seqlen)
+  if feattype == 'deepsea':
+    ds = DeepSea(use_gpu=False)
+    ref_preds = ds.predict(ref_onehot)
+    alt_preds = ds.predict(alt_onehot)
+  feats = snp_feats_from_preds(ref_preds, alt_preds,
+                               feattypes=[compfeattype] if type(compfeattype)==str else compfeattype)
+  return feats
