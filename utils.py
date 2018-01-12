@@ -1,7 +1,7 @@
 import pysam
 import numpy as np
 
-from deepsea import DeepSea
+from deepsea import DeepSea, SelectiveDeepSea
 
 
 def get_sequences(df, which_set='cagi4'):
@@ -117,7 +117,7 @@ def encode_sequences(sequences, seqlen=None):
   return encode_strings(preprocessed_seqs)
 
 def seqfeats_from_df(df, seqlen=None, seqfeatextractor='deepsea',
-                     use_gpu=False):
+                     use_gpu=False, all_layers=False):
   if 'ref_sequence' not in df.columns:
     print('getting sequences')
     ref_sequences, alt_sequences = get_sequences(df, which_set='cagi4')
@@ -127,9 +127,16 @@ def seqfeats_from_df(df, seqlen=None, seqfeatextractor='deepsea',
   ref_onehot = encode_sequences(ref_sequences, seqlen=seqlen)
   alt_onehot = encode_sequences(alt_sequences, seqlen=seqlen)
   if seqfeatextractor == 'deepsea':
-    ds = DeepSea(use_gpu=False)
-    ref_preds = ds.predict(ref_onehot)
-    alt_preds = ds.predict(alt_onehot)
+    if all_layers:
+      features = ['2','6','9','13','15']
+      ds = DeepSea(use_gpu=use_gpu, features=features)
+      ref_preds = ds.layer_activations(ref_onehot)
+      alt_preds = ds.layer_activations(alt_onehot)
+    else:
+      features = ['15']
+      ds = DeepSea(use_gpu=use_gpu, features=features)
+      ref_preds = ds.predict(ref_onehot)
+      alt_preds = ds.predict(alt_onehot)
   return ref_preds, alt_preds
 
 def snpfeats_from_df(df, seqlen=None, seqfeatextractor='deepsea',
@@ -141,3 +148,13 @@ def snpfeats_from_df(df, seqlen=None, seqfeatextractor='deepsea',
   feats = snp_feats_from_preds(ref_preds, alt_preds,
                                feattypes=[compfeattype] if type(compfeattype)==str else compfeattype)
   return feats
+
+def score_preds(preds, df=None, y=None):
+  if df is not None:
+    y = df['emVar_Hit']
+  else:
+    assert y is not None
+  roc_score = roc_auc_score(y, preds)
+  auprc_score = average_precision_score(y, preds)
+  print('AUROC:\t{}\tAUPRC:\t{}'.format(roc_score, auprc_score))
+  return roc_score, auprc_score
