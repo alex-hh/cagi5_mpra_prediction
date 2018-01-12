@@ -74,8 +74,7 @@ class DeepSea:
     for b in range(X.shape[0] // batch_size):
       x = X[b*batch_size:(b+1)*batch_size]  
       t = torch.from_numpy(x.reshape((x.shape[0],4,1,1000))).float()
-      with torch.no_grad():
-        inputs = Variable(t)
+      inputs = Variable(t, volatile=True)
       if self.use_gpu:
         inputs = inputs.cuda() # http://pytorch.org/docs/master/notes/autograd.html
       output = self.model(inputs)
@@ -84,8 +83,7 @@ class DeepSea:
       leftover = X[(b+1)*batch_size:]
       # print(leftover.shape[0])
       t = torch.from_numpy(leftover.reshape((leftover.shape[0],4,1,1000))).float()
-      with torch.no_grad():
-        inputs = Variable(t) # http://pytorch.org/docs/master/notes/autograd.html
+      inputs = Variable(t, volatile=True) # http://pytorch.org/docs/master/notes/autograd.html
       if self.use_gpu:
         inputs = inputs.cuda()
       output = self.model(inputs)

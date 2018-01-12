@@ -1,6 +1,8 @@
 import pysam
 import numpy as np
 
+from deepsea import DeepSea
+
 
 def get_sequences(df, which_set='cagi4'):
   """
@@ -114,20 +116,28 @@ def encode_sequences(sequences, seqlen=None):
 
   return encode_strings(preprocessed_seqs)
 
-def features_from_df(df, seqlen=None, seqreptype='deepsea',
-                     compfeattype='absdiff',
+def seqfeats_from_df(df, seqlen=None, seqfeatextractor='deepsea',
                      use_gpu=False):
   if 'ref_sequence' not in df.columns:
+    print('getting sequences')
     ref_sequences, alt_sequences = get_sequences(df, which_set='cagi4')
   else:
     ref_sequences = df['ref_sequence']
     alt_sequences = df['alt_sequence']
   ref_onehot = encode_sequences(ref_sequences, seqlen=seqlen)
   alt_onehot = encode_sequences(alt_sequences, seqlen=seqlen)
-  if feattype == 'deepsea':
+  if seqfeatextractor == 'deepsea':
     ds = DeepSea(use_gpu=False)
     ref_preds = ds.predict(ref_onehot)
     alt_preds = ds.predict(alt_onehot)
+  return ref_preds, alt_preds
+
+def snpfeats_from_df(df, seqlen=None, seqfeatextractor='deepsea',
+                     compfeattype='absdiff',
+                     use_gpu=False):
+  ref_preds, alt_preds = seqfeats_from_df(df, seqlen=seqlen,
+                                          seqfeatextractor=seqfeatextractor,
+                                          use_gpu=use_gpu)
   feats = snp_feats_from_preds(ref_preds, alt_preds,
                                feattypes=[compfeattype] if type(compfeattype)==str else compfeattype)
   return feats
