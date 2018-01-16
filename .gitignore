@@ -1,2 +1,4 @@
 data/remote_data
 data/remote_results
+__pycache__
+.ipynb_checkpoints
