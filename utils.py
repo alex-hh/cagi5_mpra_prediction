@@ -1,6 +1,22 @@
 import pysam
 import numpy as np
 
+from constants import LOCS
+
+def get_sequences_cagi5(df):
+  fasta_file = 'data/remote_data/hg19.genome.fa'
+  ref_sequences = []
+  alt_sequences = []
+  with pysam.Fastafile(fasta_file) as genome:
+    for i, (ix, row) in enumerate(df.iterrows()):
+      reg_el_code = row['regulatory_element'][8:]
+      seqstart = LOCS[reg_el_code]['start']
+      seqend = LOCS[reg_el_code]['end']
+      rel_pos = pos-f9_start-1
+      dnastr = genome.fetch('chr'+row['#Chrom'], start, end).upper()
+      assert dnastr[rel_pos] == row['Ref']
+      print(dnastr[rel_pos], row['Ref'])
+
 
 def get_sequences(df, which_set='cagi4'):
   """

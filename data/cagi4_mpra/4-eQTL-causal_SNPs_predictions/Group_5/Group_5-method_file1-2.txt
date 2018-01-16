@@ -1,1 +1,0 @@
-For Method 2 I used gkm-SVM weights trained on the sample data as described in Ghandhi, Lee, ..., Beer PLOS Comp Bio 2014. I scored each sequence with this model and reported a quantile normalized log2FC.

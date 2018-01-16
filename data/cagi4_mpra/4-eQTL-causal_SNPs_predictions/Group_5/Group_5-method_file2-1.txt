@@ -1,2 +1,0 @@
-For Method 1 I used gkm-SVM weights trained on GM12878 DHS regions as described in Ghandhi, Lee, ..., Beer PLOS Comp Bio 2014 and Lee, Gorkin,...,Beer Nature Genetics 2015.  I scored each sequence with this model and reported deltaSVM as logSkew.
-
