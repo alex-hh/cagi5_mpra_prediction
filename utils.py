@@ -1,3 +1,4 @@
+import re
 import pysam
 import numpy as np
 
@@ -12,12 +13,19 @@ def get_sequences_cagi5(df):
   with pysam.Fastafile(fasta_file) as genome:
     for i, (ix, row) in enumerate(df.iterrows()):
       reg_el_code = row['regulatory_element'][8:]
+      if re.match('TERT', reg_el_code):
+        reg_el_code = 'TERT'
       seqstart = LOCS[reg_el_code]['start']
       seqend = LOCS[reg_el_code]['end']
-      rel_pos = pos-f9_start-1
-      dnastr = genome.fetch('chr'+row['#Chrom'], start, end).upper()
-      assert dnastr[rel_pos] == row['Ref']
-      print(dnastr[rel_pos], row['Ref'])
+      rel_pos = row['Pos']-seqstart-1
+      dnastr = genome.fetch('chr'+row['#Chrom'], seqstart, seqend).upper()
+      try:
+        assert dnastr[rel_pos] == row['Ref'],\
+        '{} does not match row ref {}, position {} chr {} in {} CRE'.format(dnastr[rel_pos], row['Ref'], 
+                                    row['Pos'], row['#Chrom'], row['regulatory_element'])
+      except AssertionError as e:
+        print(e)
+      # print(dnastr[rel_pos], row['Ref'])
 
 def get_sequences(df, which_set='cagi4'):
   """
