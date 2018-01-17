@@ -60,9 +60,12 @@ def save_base_seqs(df):
   for (ix,row), ref, ind, mod in zip(df.iterrows(), ref, inds, modified):
     if ref not in ref_sequences:
       if mod:
-        ref_dict[row['regulatory_element']+'MOD'] = ref
+        reg_el_code = row['regulatory_element'][8:]+'MOD'
       else:
-        ref_dict[row['regulatory_element']] = ref
+        reg_el_code = row['regulatory_element'][8:]
+      if re.match('TERT', reg_el_code):
+        reg_el_code = 'TERT'
+      ref_dict[reg_el_code] = ref
       ref_sequences.add(ref)
 
   with open('data/cagi5_mpra/base_seqs.csv', 'w') as csvfile:
@@ -70,11 +73,9 @@ def save_base_seqs(df):
     writer.writerow(['regulatory_element', 'ref_sequence', 'start_pos'])
     for k, v in ref_dict.items():
       if re.search('MOD$', k):
-        reg_el_code = k[8:-3]
+        reg_el_code = k[:-3]
       else:
-        reg_el_code = k[8:]
-      if re.match('TERT', reg_el_code):
-        reg_el_code = 'TERT'
+        reg_el_code = k
       seqstart = LOCS[reg_el_code]['start']
       writer.writerow([k, v, seqstart])
 
