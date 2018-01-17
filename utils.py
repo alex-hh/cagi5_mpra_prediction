@@ -19,14 +19,15 @@ def compute_row_ref(row, base_seq_dict, use_modified=True):
 
 
 def load_base_seqs(filepath='data/cagi5_mpra/base_seqs.csv'):
-  base_seq_dict = defaultdict(dict)
+  base_seq_dict = dict()
   with open(filepath, 'r') as csvfile:
     reader = csv.reader(csvfile)
     header = next(reader)
     for row in reader:
       reg_el_code, seq, seqstart = row
+      base_seq_dict[reg_el_code] = {}
       base_seq_dict[reg_el_code]['seq'] = seq
-      base_seq_dict[reg_el_code]['start'] = seqstart
+      base_seq_dict[reg_el_code]['start'] = int(seqstart)
   return base_seq_dict
 
 def get_seqs_and_inds(df, use_modified=True):
@@ -34,14 +35,17 @@ def get_seqs_and_inds(df, use_modified=True):
   inds = []
   base_seq_dict = load_base_seqs()
   for (ix, row) in df.iterrows():
-    reg_el_code = row['regulatory_element']
-    if use_modified and row['regulatory_element']+'MOD' in base_seq_dict:
-      reg_el_code = row['regulatory_element'] + 'MOD'
+    reg_el_code = row['regulatory_element'][8:]
+    if re.match('TERT', reg_el_code):
+      reg_el_code = 'TERT'
+    if use_modified and reg_el_code+'MOD' in base_seq_dict:
+      reg_el_code = reg_el_code + 'MOD'
     seq = base_seq_dict[reg_el_code]['seq']
     start = base_seq_dict[reg_el_code]['start']
 
     rel_pos = row['Pos'] - start - 1
     if use_modified:
+      # print(row['regulatory_element'], rel_pos, reg_el_code, seq[rel_pos], row['Ref'])
       assert seq[rel_pos] == row['Ref']
     else:
       if seq[rel_pos] != row['Ref']:
@@ -59,12 +63,11 @@ def save_base_seqs(df):
   ref, alt, inds, modified = get_check_sequences_cagi5(df)
   for (ix,row), ref, ind, mod in zip(df.iterrows(), ref, inds, modified):
     if ref not in ref_sequences:
-      if mod:
-        reg_el_code = row['regulatory_element'][8:]+'MOD'
-      else:
-        reg_el_code = row['regulatory_element'][8:]
+      reg_el_code = row['regulatory_element'][8:]
       if re.match('TERT', reg_el_code):
         reg_el_code = 'TERT'
+      if mod:
+        reg_el_code = reg_el_code + 'MOD'
       ref_dict[reg_el_code] = ref
       ref_sequences.add(ref)
 
