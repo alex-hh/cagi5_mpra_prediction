@@ -10,6 +10,7 @@ def get_sequences_cagi5(df):
   fasta_file = 'data/remote_data/hg19.genome.fa'
   ref_sequences = []
   alt_sequences = []
+  snp_inds = []
   with pysam.Fastafile(fasta_file) as genome:
     for i, (ix, row) in enumerate(df.iterrows()):
       reg_el_code = row['regulatory_element'][8:]
@@ -24,7 +25,10 @@ def get_sequences_cagi5(df):
         seqstart = row['Pos'] - 1
         rel_pos = 0
 
-      dnastr = genome.fetch('chr'+row['#Chrom'], seqstart, seqend).upper()
+      dnastr = str(genome.fetch('chr'+row['#Chrom'], seqstart, seqend).upper())
+      alt = list(str(dnastr))
+      alt[rel_pos] = row['Alt']
+      alt = ''.join(alt)
 
       try:
         assert dnastr[rel_pos] == row['Ref'],\
@@ -33,7 +37,15 @@ def get_sequences_cagi5(df):
       except AssertionError as e:
         print(e)
         print(rel_pos)
-      # print(dnastr[rel_pos], row['Ref'])
+        dnastr = list(dnastr)
+        dnastr[rel_pos] = row['Ref']
+        dnastr = ''.join(dnastr)
+
+      ref_sequences.append(dnastr)
+      alt_sequences.append(alt)
+      snp_inds.append(rel_pos)
+
+  return ref_sequences, alt_sequences, snp_inds
 
 def get_sequences(df, which_set='cagi4'):
   """
