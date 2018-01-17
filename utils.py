@@ -73,6 +73,8 @@ def save_base_seqs(df):
         reg_el_code = k[8:-3]
       else:
         reg_el_code = k[8:]
+      if re.match('TERT', reg_el_code):
+        reg_el_code = 'TERT'
       seqstart = LOCS[reg_el_code]['start']
       writer.writerow([k, v, seqstart])
 
