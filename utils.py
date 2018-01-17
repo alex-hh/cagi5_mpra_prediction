@@ -5,7 +5,7 @@ import numpy as np
 
 from constants import LOCS
 from deepsea import DeepSea
-
+from collections import defaultdict
 
 def compute_row_ref(row, base_seq_dict, use_modified=True):
   if use_modified:
@@ -19,7 +19,7 @@ def compute_row_ref(row, base_seq_dict, use_modified=True):
 
 
 def load_base_seqs(filepath='data/cagi5_mpra/base_seqs.csv'):
-  base_seq_dict = {}
+  base_seq_dict = defaultdict(dict)
   with open(filepath, 'r') as csvfile:
     reader = csv.reader(csvfile)
     header = next(reader)
