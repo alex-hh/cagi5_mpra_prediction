@@ -127,8 +127,9 @@ class DeepSea:
       if self.use_gpu:
         inputs = inputs.cuda()
       output = self.model(inputs)
+      print(type(output))
       if type(output)==list:
-        output = output[self.features.index('15')]
+        output = output[self.features.index('15')].data.cpu().numpy()
       else:
         output = output.data.cpu().numpy()
       preds[(b+1)*batch_size:] = output

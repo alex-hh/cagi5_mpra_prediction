@@ -54,7 +54,7 @@ def get_seqs_and_inds(df, use_modified=True):
     
     alt = list(seq)
     alt[rel_pos] = row['Alt']
-    alt = ''.join(rel_pos)
+    alt = ''.join(alt)
 
     refs.append(seq)
     alts.append(alt)
@@ -269,7 +269,7 @@ def seqfeats_from_df(df, seqlen=None, seqfeatextractor='deepsea',
   return ref_preds, alt_preds
 
 def snpfeats_from_df(df, seqlen=None, seqfeatextractor='deepsea',
-                     compfeattype='absdiff',
+                     compfeattype='absdiff', all_layers=False,
                      use_gpu=False):
   ref_preds, alt_preds = seqfeats_from_df(df, seqlen=seqlen,
                                           seqfeatextractor=seqfeatextractor,
