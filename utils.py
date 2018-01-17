@@ -1,4 +1,5 @@
 import re
+import csv
 import pysam
 import numpy as np
 
@@ -6,11 +7,82 @@ from constants import LOCS
 from deepsea import DeepSea
 
 
-def get_sequences_cagi5(df):
+def compute_row_ref(row, base_seq_dict, use_modified=True):
+  if use_modified:
+    if row['regulatory_element']+'MOD' in base_seq_dict:
+      ref_seq = base_seq_dict[row['regulatory_element']] + 'MOD'
+    else:
+      ref_seq = base_seq_dict[row['regulatory_element']]
+  else:
+    ref_seq = base_seq_dict[row['regulatory_element']]
+  return ref_seq
+
+
+def load_base_seqs(filepath='data/cagi5_mpra/base_seqs.csv'):
+  base_seq_dict = {}
+  with open(filepath, 'r') as csvfile:
+    reader = csv.reader(csvfile)
+    header = next(reader)
+    for row in reader:
+      reg_el_code, seq, seqstart = row
+      base_seq_dict[reg_el_code]['seq'] = seq
+      base_seq_dict[reg_el_code]['start'] = seqstart
+  return base_seq_dict
+
+def get_seqs_and_inds(df, use_modified=True):
+  seqs = []
+  inds = []
+  base_seq_dict = load_base_seqs()
+  for (ix, row) in df.iterrows():
+    reg_el_code = row['regulatory_element']
+    if use_modified and row['regulatory_element']+'MOD' in base_seq_dict:
+      reg_el_code = row['regulatory_element'] + 'MOD'
+    seq = base_seq_dict[reg_el_code]['seq']
+    start = base_seq_dict[reg_el_code]['start']
+
+    rel_pos = row['Pos'] - start - 1
+    if use_modified:
+      assert seq[rel_pos] == row['Ref']
+    else:
+      if seq[rel_pos] != row['Ref']:
+        print('Non matching seq at index', ix)
+    
+    seqs.append(seq)
+    inds.append(rel_pos)
+
+  return seqs, inds
+
+def save_base_seqs(df):
+  fasta_file = 'data/remote_data/hg19.genome.fa'
+  ref_sequences = set()
+  ref_dict = {}
+  ref, alt, inds, modified = get_check_sequences_cagi5(df)
+  for (ix,row), ref, ind, mod in zip(df.iterrows(), ref, inds, modified):
+    if ref not in ref_sequences:
+      if mod:
+        ref_dict[row['regulatory_element']+'MOD'] = ref
+      else:
+        ref_dict[row['regulatory_element']] = ref
+      ref_sequences.add(ref)
+
+  with open('data/cagi5_mpra/base_seqs.csv', 'w') as csvfile:
+    writer = csv.writer(csvfile)
+    writer.writerow(['regulatory_element', 'ref_sequence', 'start_pos'])
+    for k, v in ref_dict.items():
+      if re.search('MOD$', k):
+        reg_el_code = k[:-3]
+      else:
+        reg_el_code = k
+      seqstart = LOCS[reg_el_code]['start']
+      writer.writerow([k, v, seqstart])
+
+def get_check_sequences_cagi5(df):
+  # n.b. we should actually only need to make n reg elements calls to the genome, and to do this only once.
   fasta_file = 'data/remote_data/hg19.genome.fa'
   ref_sequences = []
   alt_sequences = []
   snp_inds = []
+  modified = []
   with pysam.Fastafile(fasta_file) as genome:
     for i, (ix, row) in enumerate(df.iterrows()):
       reg_el_code = row['regulatory_element'][8:]
@@ -34,18 +106,20 @@ def get_sequences_cagi5(df):
         assert dnastr[rel_pos] == row['Ref'],\
         '{} does not match row ref {}, position {} chr {} in {} CRE'.format(dnastr[rel_pos], row['Ref'], 
                                     row['Pos'], row['#Chrom'], row['regulatory_element'])
+        modified.append(False)
       except AssertionError as e:
         print(e)
         print(rel_pos)
         dnastr = list(dnastr)
         dnastr[rel_pos] = row['Ref']
         dnastr = ''.join(dnastr)
+        modified.append(True)
 
       ref_sequences.append(dnastr)
       alt_sequences.append(alt)
       snp_inds.append(rel_pos)
 
-  return ref_sequences, alt_sequences, snp_inds
+  return ref_sequences, alt_sequences, snp_inds, modified
 
 def get_sequences(df, which_set='cagi4'):
   """
