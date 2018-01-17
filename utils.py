@@ -30,7 +30,8 @@ def load_base_seqs(filepath='data/cagi5_mpra/base_seqs.csv'):
   return base_seq_dict
 
 def get_seqs_and_inds(df, use_modified=True):
-  seqs = []
+  refs = []
+  alts = []
   inds = []
   base_seq_dict = load_base_seqs()
   for (ix, row) in df.iterrows():
@@ -47,10 +48,15 @@ def get_seqs_and_inds(df, use_modified=True):
       if seq[rel_pos] != row['Ref']:
         print('Non matching seq at index', ix)
     
-    seqs.append(seq)
+    alt = list(seq)
+    alt[rel_pos] = row['Alt']
+    alt = ''.join(rel_pos)
+
+    refs.append(seq)
+    alts.append(alt)
     inds.append(rel_pos)
 
-  return seqs, inds
+  return refs, alts, inds
 
 def save_base_seqs(df):
   fasta_file = 'data/remote_data/hg19.genome.fa'
