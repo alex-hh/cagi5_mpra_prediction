@@ -70,9 +70,9 @@ def save_base_seqs(df):
     writer.writerow(['regulatory_element', 'ref_sequence', 'start_pos'])
     for k, v in ref_dict.items():
       if re.search('MOD$', k):
-        reg_el_code = k[:-3]
+        reg_el_code = k[8:-3]
       else:
-        reg_el_code = k
+        reg_el_code = k[8:]
       seqstart = LOCS[reg_el_code]['start']
       writer.writerow([k, v, seqstart])
 
