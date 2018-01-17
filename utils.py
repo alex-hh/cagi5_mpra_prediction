@@ -18,13 +18,21 @@ def get_sequences_cagi5(df):
       seqstart = LOCS[reg_el_code]['start']
       seqend = LOCS[reg_el_code]['end']
       rel_pos = row['Pos']-seqstart-1
+      try:
+        assert rel_pos >= 0
+      except AssertionError as e:
+        seqstart = row['Pos'] - 1
+        rel_pos = 0
+
       dnastr = genome.fetch('chr'+row['#Chrom'], seqstart, seqend).upper()
+
       try:
         assert dnastr[rel_pos] == row['Ref'],\
         '{} does not match row ref {}, position {} chr {} in {} CRE'.format(dnastr[rel_pos], row['Ref'], 
                                     row['Pos'], row['#Chrom'], row['regulatory_element'])
       except AssertionError as e:
         print(e)
+        print(rel_pos)
       # print(dnastr[rel_pos], row['Ref'])
 
 def get_sequences(df, which_set='cagi4'):
