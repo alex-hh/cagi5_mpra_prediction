@@ -4,7 +4,6 @@ import pysam
 import numpy as np
 
 from constants import LOCS
-from deepsea import DeepSea
 from collections import defaultdict
 
 def compute_row_ref(row, base_seq_dict, use_modified=True):
@@ -247,6 +246,7 @@ def encode_sequences(sequences, seqlen=None):
 
 def seqfeats_from_df(df, seqlen=None, seqfeatextractor='deepsea',
                      use_gpu=False, all_layers=False):
+  from deepsea import DeepSea
   if 'ref_sequence' not in df.columns:
     print('getting sequences')
     ref_sequences, alt_sequences = get_sequences(df, which_set='cagi4')
