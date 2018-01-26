@@ -86,3 +86,12 @@ class SNPContext:
   # idea here is to use some kind of local information
   def __init__(self):
     pass
+
+class Conservation:
+  def __init__(self):
+    pass
+
+  def get_features(self, df):
+    pass
+
+class MPRATransfer:

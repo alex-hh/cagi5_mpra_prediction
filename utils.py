@@ -132,6 +132,50 @@ def get_check_sequences_cagi5(df):
 
   return ref_sequences, alt_sequences, snp_inds, modified
 
+def get_row_score(row, tbifile, gerp=False):
+  # gerp has two scores: neutral rate and RS score. phastcons/phylop only have one
+  vals = next(tbifile.fetch(row['#Chrom'], row['Pos']-1, row['Pos']))
+  if gerp:
+    tbi_chr, tbi_pos, tbi_nscore, tbi_rsscore = tbi_vals.split('\t')
+    tbi_nscore = float(tbi_nscore)
+    tbi_rsscore = float(tbi_rsscore)
+    tbi_pos = int(tbi_pos)
+    assert tbi_pos == row['Pos']
+    return tbi_nscore, tbi_rsscore
+  else:
+    tbi_chr, tbi_pos, tbi_score = tbi_vals.split('\t')
+    tbi_score = float(tbi_score)
+    tbi_pos = int(tbi_pos)
+    assert tbi_pos == row['Pos']
+    return tbi_score
+
+def get_cons_scores(df):
+  phastcon_file = 'data/remote_data/phastCons/primates_nohuman.tsv.gz'
+  phylop_file = 'data/remote_data/phyloP/primates_nohuman.tsv.gz'
+  gerp_file = 'data/remote_data/Gerp/gerp_scores.tsv.gz'
+  ph_scores = []
+  php_scores = []
+  gerpn_scores = []
+  gerprs_scores = []
+  with pysam.Tabixfile(phastcon_file) as phfile:
+    for i, (ix, row) in enumerate(df.iterrows()):
+      score = get_row_score(row, phfile)
+      ph_scores.append(ph_score)
+
+  with pysam.Tabixfile(phylop_file) as phpfile:
+    for i, (ix, row) in enumerate(df.iterrows()):
+      score = get_row_score(row, phpfile)
+      php_scores.append(score)
+
+  with pysam.Tabixfile(gerp_file) as gerpfile:
+    for i, (ix, row) in enumerate(df.iterrows()):
+      nscore, rsscore = get_row_score(row, gerpfile, gerp=True)
+      gerpn_scores.append(nscore)
+      gerprs_scores.append(rsscore)
+
+  return ph_scores, php_scores, gerpn_scores, gerprs_scores
+
+
 def get_sequences(df, which_set='cagi4'):
   """
     cagi4: extract 150bp from hg19 centred on the variant.
