@@ -160,7 +160,7 @@ def get_cons_scores(df):
   with pysam.Tabixfile(phastcon_file) as phfile:
     for i, (ix, row) in enumerate(df.iterrows()):
       score = get_row_score(row, phfile)
-      ph_scores.append(ph_score)
+      ph_scores.append(score)
 
   with pysam.Tabixfile(phylop_file) as phpfile:
     for i, (ix, row) in enumerate(df.iterrows()):
