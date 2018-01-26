@@ -81,3 +81,8 @@ class DSDataKerasModel:
     if 'reg_weighting' in model_args: 
       model_args['reg_weighting'] = get_weighting(**model_args['reg_weighting'])
     return model_class(**model_args)
+
+class SNPContext:
+  # idea here is to use some kind of local information
+  def __init__(self):
+    pass
