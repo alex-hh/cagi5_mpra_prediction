@@ -134,7 +134,7 @@ def get_check_sequences_cagi5(df):
 
 def get_row_score(row, tbifile, gerp=False):
   # gerp has two scores: neutral rate and RS score. phastcons/phylop only have one
-  vals = next(tbifile.fetch(row['#Chrom'], row['Pos']-1, row['Pos']))
+  tbi_vals = next(tbifile.fetch(row['#Chrom'], row['Pos']-1, row['Pos']))
   if gerp:
     tbi_chr, tbi_pos, tbi_nscore, tbi_rsscore = tbi_vals.split('\t')
     tbi_nscore = float(tbi_nscore)
