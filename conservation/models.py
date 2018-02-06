@@ -354,7 +354,7 @@ class DanQ:
 
   def layer_activations(self, k, X, batch_size=100):
     # compute activations for the kth layer
-    inp = self.model.input
+    inp = self.model.layers[0].input # https://keras.io/getting-started/faq/#how-can-i-obtain-the-output-of-an-intermediate-layer
     out = self.model.layers[k].output
     func = K.function([inp], [out])
     return batch_apply_func(func, X, batch_size=batch_size)
