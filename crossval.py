@@ -12,7 +12,7 @@ class CVOperator:
     self.df = df
     self.df['cv_prediction'] = np.nan
 
-  def get_fold_preds(self, train_df, val_df):
+  def get_preds(self, train_df, val_df):
     X_train = self.model.get_features(train_df)
     y_train = train_df['class']
 
@@ -77,7 +77,7 @@ class ChunkCV(CVOperator):
     trainvaldf = train_val_split(self.fold_dict, self.breakpoint_df, f)
     train_df = trainvaldf[trainvaldf['is_train']]
     val_df = trainvaldf[~trainvaldf['is_train']]
-    preds = self.get_fold_preds(train_df, val_df)
+    preds = self.get_preds(train_df, val_df)
     self.breakpoint_df.loc[~self.breakpoint_df['is_train'], 'cv_prediction'] = preds
     return preds
 
