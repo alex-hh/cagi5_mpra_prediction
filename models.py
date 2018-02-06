@@ -60,20 +60,28 @@ class DSDataKerasModel(BaseModel):
     super().__init__(multiclass=multiclass, classifier_kwargs=classifier_kwargs,
                      classifier=classifier, verbose=verbose)
 
-  def get_features(self, df):
+  def get_features(self, df, layers=[]):
     assert 'ref_sequence' in df.columns
     ref_onehot = encode_sequences(df['ref_sequence'], seqlen=1000)
     alt_onehot = encode_sequences(df['alt_sequence'], seqlen=1000)
     self.get_trained_model()
 
-    if all_layers:
+    if len(layers)==0:
       m = model_class.model
       ref_p = m.predict(ref_onehot)
       alt_p = m.predict(alt_onehot)
-      pass
 
     else:
-      pass
+      ref_ps, alt_ps = [], []
+      for l in layers:
+        ref_p = model_class.layer_activations(l, ref_onehot)
+        alt_p = model_class.layer_activations(l, alt_onehot)
+        ref_ps.append(ref_p)
+        alt_ps.append(alt_p)
+      ref_p = np.concatenate(ref_ps, axis=1)
+      alt_p = np.concatenate(alt_ps, axis=1)
+
+    return snp_feats_from_preds(ref_p, alt_p, self.feattypes)
 
   def get_trained_model(self):
     model_class = self.get_untrained_model(self.experiment_name)
@@ -85,8 +93,6 @@ class DSDataKerasModel(BaseModel):
     settings = pickle.load(open('data/remote_workspace/experiment_settings/{}.p'.format(self.experiment_name), 'rb'))
     # if i just want the class name i can do settings['model_class'].__name__
     model_class, model_args = settings['model_class'], settings['model_args'] 
-    if 'reg_weighting' in model_args: 
-      model_args['reg_weighting'] = get_weighting(**model_args['reg_weighting'])
     return model_class(**model_args)
 
 class SNPContext(BaseModel):
