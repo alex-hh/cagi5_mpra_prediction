@@ -154,6 +154,16 @@ class Conservation(BaseModel):
     feat = df[self.scores]
     return feat
 
+class EnhancerOneHot(BaseModel):
+  def __init__(self, multiclass='ovr', classifier='lr', classifier_kwargs={},
+               verbose=False):
+    super().__init__(multiclass=multiclass, classifier_kwargs=classifier_kwargs,
+                     classifier=classifier, verbose=verbose)
+
+  def get_features(self, df):
+    onehot = pd.get_dummies(df['regulatory_element']).values
+    return onehot
+
 class MPRATransfer(BaseModel):
   pass
 

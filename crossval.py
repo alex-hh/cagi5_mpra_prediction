@@ -66,7 +66,7 @@ class ChunkCV(CVOperator):
     self.nf = nf
     
     if fold_dict is None:
-      fold_dict = df_cv_split(breakpoint_df, nf)
+      fold_dict = df_cv_split(self.breakpoint_df, nf)
     self.fold_dict = fold_dict
 
   def get_cv_preds(self):
