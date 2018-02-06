@@ -157,13 +157,20 @@ class Conservation(BaseModel):
     return feat
 
 class EnhancerOneHot(BaseModel):
-  def __init__(self, multiclass='ovr', classifier='lr', classifier_kwargs={},
+  def __init__(self, enh_names=['release_F9', 'release_GP1BB', 'release_HBB', 'release_HBG1',
+       'release_HNF4A', 'release_IRF4', 'release_IRF6', 'release_LDLR',
+       'release_MSMB', 'release_MYCrs6983267', 'release_PKLR',
+       'release_SORT1', 'release_TERT-GBM', 'release_TERT-HEK293T',
+       'release_ZFAND3'], multiclass='ovr', classifier='lr', classifier_kwargs={},
                verbose=False):
+    self.enh_names = enh_names
     super().__init__(multiclass=multiclass, classifier_kwargs=classifier_kwargs,
                      classifier=classifier, verbose=verbose)
 
   def get_features(self, df):
-    onehot = pd.get_dummies(df['regulatory_element']).values
+    # https://stackoverflow.com/questions/37425961/dummy-variables-when-not-all-categories-are-present
+    enhancers = df['regulatory_element'].astype('category', categories=self.enh_names)
+    onehot = pd.get_dummies(enhancers, drop_first=True).values
     return onehot
 
 class MPRATransfer(BaseModel):
