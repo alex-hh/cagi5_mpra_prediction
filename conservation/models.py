@@ -33,10 +33,12 @@ def batch_apply_func(func, X, batch_size=256):
 
   while end <= X.shape[0]:
     print(end)
+    K.set_learning_phase(0)
     outputs.append(func([X[start:end]])[0])
     start = end
     end += batch_size
   if X.shape[0] > start:
+    K.set_learning_phase(0)
     outputs.append(func([X[start:X.shape[0]]])[0])
   
   outputs = np.concatenate(outputs, axis=0)
