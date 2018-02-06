@@ -41,6 +41,7 @@ def batch_apply_func(func, X, batch_size=256):
   
   outputs = np.concatenate(outputs, axis=0)
   assert outputs.shape[0] == X.shape[0]
+  print(outputs.shape)
   return outputs
 
 class CNN():

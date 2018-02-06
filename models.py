@@ -81,10 +81,12 @@ class DSDataKerasModel(BaseModel):
         print(ref_onehot.shape)
         ref_p = self.model_class.layer_activations(2, np.zeros((ref_onehot.shape[0], 1000, 4)))
         alt_p = self.model_class.layer_activations(2, np.zeros((ref_onehot.shape[0], 1000, 4)))
+        print(ref_p.shape)
         ref_ps.append(ref_p)
         alt_ps.append(alt_p)
       ref_p = np.concatenate(ref_ps, axis=1)
       alt_p = np.concatenate(alt_ps, axis=1)
+      print(ref_p.shape)
 
     return snp_feats_from_preds(ref_p, alt_p, self.feattypes)
 
