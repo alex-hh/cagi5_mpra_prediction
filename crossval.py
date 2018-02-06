@@ -70,13 +70,16 @@ class ChunkCV(CVOperator):
 
   def get_cv_preds(self):
     for f in range(self.nf):
-      trainvaldf = train_val_split(self.fold_dict, self.breakpoint_df, f)
-      train_df = trainvaldf[trainvaldf['is_train']]
-      val_df = trainvaldf[~trainvaldf['is_train']]
-      preds = self.get_fold_preds(train_df, val_df)
-      self.breakpoint_df.loc[~self.breakpoint_df['is_train'], 'cv_prediction'] = preds
+      self.get_fold_preds(f)
     return self.breakpoint_df
 
+  def get_fold_preds(self, f):
+    trainvaldf = train_val_split(self.fold_dict, self.breakpoint_df, f)
+    train_df = trainvaldf[trainvaldf['is_train']]
+    val_df = trainvaldf[~trainvaldf['is_train']]
+    preds = self.get_fold_preds(train_df, val_df)
+    self.breakpoint_df.loc[~self.breakpoint_df['is_train'], 'cv_prediction'] = preds
+    return preds
 
 def cvpreds_df_chunk_folds(df, model_class, model_args=[], model_kwargs={}, nf=5):
   model = model_class(*model_args, **model_kwargs)
