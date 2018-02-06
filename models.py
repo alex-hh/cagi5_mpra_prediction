@@ -76,6 +76,8 @@ class DSDataKerasModel(BaseModel):
     else:
       ref_ps, alt_ps = [], []
       for l in self.layers:
+        print(l)
+        print(self.model_class.layer_activations(2, np.zeros((1,1000,4))))
         ref_p = self.model_class.layer_activations(l, ref_onehot)
         alt_p = self.model_class.layer_activations(l, alt_onehot)
         ref_ps.append(ref_p)
