@@ -32,12 +32,13 @@ def batch_apply_func(func, X, batch_size=256):
   outputs = []
 
   while end <= X.shape[0]:
-    print(end)
-    outputs.append(func([X[start:end]])[0])
+    # print(end)
+    # https://keras.io/getting-started/faq/
+    outputs.append(func([X[start:end], 0])[0])
     start = end
     end += batch_size
   if X.shape[0] > start:
-    outputs.append(func([X[start:X.shape[0]]])[0])
+    outputs.append(func([X[start:X.shape[0]], 0])[0])
   
   outputs = np.concatenate(outputs, axis=0)
   assert outputs.shape[0] == X.shape[0]
@@ -141,7 +142,7 @@ class CNN():
     # compute activations for the kth layer
     inp = self.model.input
     out = self.model.layers[k].output
-    func = K.function([inp], [out])
+    func = K.function([inp, K.learning_phase()], [out])
     return batch_apply_func(func, X, batch_size=batch_size)
 
   def pooled_layer_activations(self, k, X, batch_size=100):
@@ -356,8 +357,9 @@ class DanQ:
 
   def layer_activations(self, k, X, batch_size=100):
     # compute activations for the kth layer
-    inp = self.model.layers[0].input # https://keras.io/getting-started/faq/#how-can-i-obtain-the-output-of-an-intermediate-layer
+    # https://keras.io/getting-started/faq/#how-can-i-obtain-the-output-of-an-intermediate-layer
+    inp = self.model.layers[0].input 
     out = self.model.layers[k].output
-    K.set_learning_phase(0)
+    # K.set_learning_phase(0)
     func = K.function([inp, K.learning_phase()], [out])
     return batch_apply_func(func, X, batch_size=batch_size)
