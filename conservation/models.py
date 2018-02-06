@@ -32,7 +32,6 @@ def batch_apply_func(func, X, batch_size=256):
   outputs = []
 
   while end <= X.shape[0]:
-    # print(end)
     # https://keras.io/getting-started/faq/
     outputs.append(func([X[start:end], 0])[0])
     start = end
@@ -42,7 +41,6 @@ def batch_apply_func(func, X, batch_size=256):
   
   outputs = np.concatenate(outputs, axis=0)
   assert outputs.shape[0] == X.shape[0]
-  # print(outputs.shape)
   return outputs
 
 class CNN():
