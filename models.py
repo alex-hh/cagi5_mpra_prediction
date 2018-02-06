@@ -84,9 +84,9 @@ class DSDataKerasModel(BaseModel):
     return snp_feats_from_preds(ref_p, alt_p, self.feattypes)
 
   def get_trained_model(self):
-    model_class = self.get_untrained_model(self.experiment_name)
+    model_class = self.get_untrained_model()
     model_class.get_compiled_model()
-    model_class.model.load_weights('data/remote_results/models-best/{}.h5'.format(RESULT_DIR, experiment_name))
+    model_class.model.load_weights('data/remote_results/models-best/{}.h5'.format(self.experiment_name))
     self.model_class = model_class
 
   def get_untrained_model(self):
