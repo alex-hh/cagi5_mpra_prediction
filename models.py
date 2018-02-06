@@ -54,27 +54,28 @@ class DeepSeaSNP(BaseModel):
 
 
 class DSDataKerasModel(BaseModel):
-  def __init__(self, experiment_name, feattypes=['absdiff'],
+  def __init__(self, experiment_name, feattypes=['absdiff'], layers=[],
                verbose=False, multiclass='ovr', classifier='lr', classifier_kwargs={}):
     self.feattypes = feattypes
     self.experiment_name = experiment_name
+    self.layers = layers
     super().__init__(multiclass=multiclass, classifier_kwargs=classifier_kwargs,
                      classifier=classifier, verbose=verbose)
 
-  def get_features(self, df, layers=[]):
+  def get_features(self, df):
     assert 'ref_sequence' in df.columns
     ref_onehot = encode_sequences(df['ref_sequence'], seqlen=1000)
     alt_onehot = encode_sequences(df['alt_sequence'], seqlen=1000)
     self.get_trained_model()
 
-    if len(layers)==0:
+    if len(self.layers)==0:
       m = self.model_class.model
       ref_p = m.predict(ref_onehot)
       alt_p = m.predict(alt_onehot)
 
     else:
       ref_ps, alt_ps = [], []
-      for l in layers:
+      for l in self.layers:
         ref_p = self.model_class.layer_activations(l, ref_onehot)
         alt_p = self.model_class.layer_activations(l, alt_onehot)
         ref_ps.append(ref_p)
