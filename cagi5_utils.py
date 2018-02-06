@@ -41,6 +41,8 @@ def get_breakpoint_df(df):
       lengths.append(None)
   breakpoint_df['chunk_length'] = lengths
 
+  breakpoint_df['is_start'] = self.breakpoint_df['is_break'] == 'start'
+  breakpoint_df['chunk_id'] = self.breakpoint_df.groupby(['regulatory_element'])['is_start'].cumsum() - 1
   return breakpoint_df
 
 def get_chunk_counts(df):
