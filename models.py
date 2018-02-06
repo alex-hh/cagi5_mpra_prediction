@@ -171,6 +171,7 @@ class EnhancerOneHot(BaseModel):
     # https://stackoverflow.com/questions/37425961/dummy-variables-when-not-all-categories-are-present
     enhancers = df['regulatory_element'].astype('category', categories=self.enh_names)
     onehot = pd.get_dummies(enhancers, drop_first=True).values
+    # print(onehot.shape)
     return onehot
 
 class MPRATransfer(BaseModel):
