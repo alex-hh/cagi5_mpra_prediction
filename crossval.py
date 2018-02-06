@@ -58,15 +58,19 @@ def cvpreds_df_enhancer_folds(df, model_class, model_args=[], model_kwargs={}):
 
 class ChunkCV(CVOperator):
 
-  def __init__(self, df, model_class, model_args=[], model_kwargs={}, nf=5):
+  def __init__(self, df, model_class, model_args=[], model_kwargs={}, nf=5,
+               fold_dict=None):
     super().__init__(df, model_class, model_args=model_args, model_kwargs=model_kwargs)
     self.breakpoint_df = get_breakpoint_df(df)
     self.breakpoint_df['is_start'] = self.breakpoint_df['is_break'] == 'start'
     self.breakpoint_df['chunk_id'] = self.breakpoint_df.groupby(['regulatory_element'])['is_start'].cumsum() - 1
     assert np.sum(self.breakpoint_df['chunk_length']) == sum(df.groupby(['regulatory_element'])['Pos'].nunique())
     self.nf = nf
-    self.chunk_counts = get_chunk_counts(self.breakpoint_df)
-    self.fold_dict = pick_train_chunks(self.chunk_counts, nf=self.nf)
+    
+    if fold_dict is None:
+      self.chunk_counts = get_chunk_counts(self.breakpoint_df)
+      fold_dict = pick_train_chunks(self.chunk_counts, nf=self.nf)
+    self.fold_dict = fold_dict
 
   def get_cv_preds(self):
     for f in range(self.nf):
@@ -80,6 +84,14 @@ class ChunkCV(CVOperator):
     preds = self.get_preds(train_df, val_df)
     self.breakpoint_df.loc[~self.breakpoint_df['is_train'], 'cv_prediction'] = preds
     return preds
+
+def df_cv_split(breakpoint_df, nf):
+  breakpoint_df['is_start'] = self.breakpoint_df['is_break'] == 'start'
+  breakpoint_df['chunk_id'] = self.breakpoint_df.groupby(['regulatory_element'])['is_start'].cumsum() - 1
+  assert np.sum(self.breakpoint_df['chunk_length']) == sum(df.groupby(['regulatory_element'])['Pos'].nunique())
+  chunk_counts = get_chunk_counts(self.breakpoint_df)
+  fold_dict = pick_train_chunks(self.chunk_counts, nf=self.nf)
+  return fold_dict
 
 def cvpreds_df_chunk_folds(df, model_class, model_args=[], model_kwargs={}, nf=5):
   model = model_class(*model_args, **model_kwargs)
