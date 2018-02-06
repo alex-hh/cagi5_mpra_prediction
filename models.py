@@ -78,8 +78,9 @@ class DSDataKerasModel(BaseModel):
       for l in self.layers:
         print(l)
         print(self.model_class.layer_activations(2, np.zeros((1,1000,4))))
-        ref_p = self.model_class.layer_activations(l, ref_onehot)
-        alt_p = self.model_class.layer_activations(l, alt_onehot)
+        print(ref_onehot.shape)
+        ref_p = self.model_class.layer_activations(l, np.zeros((ref_onehot.shape[0], 1000, 4)))
+        alt_p = self.model_class.layer_activations(l, np.zeros((ref_onehot.shape[0], 1000, 4)))
         ref_ps.append(ref_p)
         alt_ps.append(alt_p)
       ref_p = np.concatenate(ref_ps, axis=1)
