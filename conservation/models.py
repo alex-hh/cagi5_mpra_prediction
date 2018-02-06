@@ -32,7 +32,7 @@ def batch_apply_func(func, X, batch_size=256):
   outputs = []
 
   while end <= X.shape[0]:
-    print(end)
+    # print(end)
     outputs.append(func([X[start:end]])[0])
     start = end
     end += batch_size
@@ -41,7 +41,7 @@ def batch_apply_func(func, X, batch_size=256):
   
   outputs = np.concatenate(outputs, axis=0)
   assert outputs.shape[0] == X.shape[0]
-  print(outputs.shape)
+  # print(outputs.shape)
   return outputs
 
 class CNN():
