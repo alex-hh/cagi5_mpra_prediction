@@ -67,15 +67,15 @@ class DSDataKerasModel(BaseModel):
     self.get_trained_model()
 
     if len(layers)==0:
-      m = model_class.model
+      m = self.model_class.model
       ref_p = m.predict(ref_onehot)
       alt_p = m.predict(alt_onehot)
 
     else:
       ref_ps, alt_ps = [], []
       for l in layers:
-        ref_p = model_class.layer_activations(l, ref_onehot)
-        alt_p = model_class.layer_activations(l, alt_onehot)
+        ref_p = self.model_class.layer_activations(l, ref_onehot)
+        alt_p = self.model_class.layer_activations(l, alt_onehot)
         ref_ps.append(ref_p)
         alt_ps.append(alt_p)
       ref_p = np.concatenate(ref_ps, axis=1)
