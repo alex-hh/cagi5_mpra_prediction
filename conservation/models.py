@@ -268,3 +268,94 @@ class CNN():
       return Activation('elu')
     else:
       return Activation('relu')
+
+class DanQ:
+  # TODO: think about converting this to the functional API
+  def __init__(self, loss='binary_crossentropy', lr=0.001, output_dim=919, hidden_dim=[925],
+               cell_type='LSTM', final_layer=True, ncell=320, optimizer='rmsprop',
+               return_sequences=True, nconv=320, pooltype='uniform', motif_embedding_dim=None,
+               global_pooltype=None,
+               nstack=1,
+               kernel_size=26,
+               convdropout=0.2, preembed_dropout=0., lstmdropout=0.5, hidden_drop=[None], pool_size=13,
+               lowres_pool=26, standardres_pool=17, highres_pool=11, stack_pool_size=None):
+    self.loss = loss
+    self.optimizer = optimizer
+    self.lr = lr
+    self.model = Sequential()
+    self.model.add(Conv1D(input_shape=(1000,4),
+                          filters=nconv,
+                          kernel_size=kernel_size,
+                          padding="valid",
+                          activation="relu",
+                          strides=1))
+    if pooltype == 'uniform':
+      self.model.add(MaxPooling1D(pool_size=pool_size, strides=pool_size))
+    elif pooltype == 'mixedres':
+      self.model.add(MixedResPool())
+    elif pooltype == 'central':
+      self.model.add(CentralFocussedPool(layer1_conv=26, lowres_pool=lowres_pool,
+                                         standardres_pool=standardres_pool,
+                                         highres_pool=highres_pool))
+    self.model.add(Dropout(preembed_dropout))
+    if motif_embedding_dim is not None:
+      self.model.add(Conv1D(motif_embedding_dim, 1, activation=None, use_bias=False))
+    self.model.add(Dropout(convdropout))
+    # i no longer need to specify input / output dims, so I should check they match up as expected
+    # the concat merge leads to a 75 x 640 output, which is correct - c.f. py2models
+    # if cell_type == 'LSTM':
+    #   cell = LSTM(ncell, return_sequences=True if stack else return_sequences)
+    # elif cell_type == 'GRU':
+    #   cell = GRU(ncell, return_sequences=True if stack else return_sequences)
+    # self.model.add(Bidirectional(cell, merge_mode='concat'))
+    for i in range(nstack):
+      if stack_pool_size is not None and i > 0:
+        self.model.add(MaxPooling1D(pool_size=2, strides=2))
+      stack_cell = LSTM(ncell, return_sequences=return_sequences)
+      self.model.add(Bidirectional(stack_cell, merge_mode='concat'))
+
+    if global_pooltype == 'mean':
+      self.model.add(GlobalAveragePooling1D())
+
+    self.model.add(Dropout(lstmdropout)) # can't delete this - it messes with the load weights
+
+    if return_sequences and global_pooltype is None:
+      self.model.add(Flatten())
+    for h, d in zip(hidden_dim, hidden_drop):
+      self.model.add(Dense(units=h))
+      self.model.add(Activation('relu'))
+      if d is not None:
+        self.model.add(Dropout(d))
+    if final_layer:
+      self.model.add(Dense(units=919))
+      self.model.add(Activation('sigmoid'))
+  
+  def load_weights(self, filename, num_layers=None, output_ids=None):
+    # self.model.load_weights(filename)
+    # return self.model
+    load_weights(self.model, filename, num_layers, output_ids)
+
+  def get_compiled_model(self, weight_file=None):
+    if weight_file is not None:
+      self.model.load_weights(weight_file)
+    loss = self.loss
+    if loss == 'weighted_binary_crossentropy':
+      assert self.pos_weight is not None
+      loss = partial(weighted_binary_crossentropy, pos_weight=self.pos_weight)
+      update_wrapper(loss, weighted_binary_crossentropy)
+      # http://louistiao.me/posts/adding-__name__-and-__doc__-attributes-to-functoolspartial-objects/
+      # optimizer='rmsprop', class_mode='binary' are DanQ defaults.
+    if self.optimizer == 'rmsprop':
+      optimizer = RMSprop(self.lr)
+    else:
+      optimizer = Adam(self.lr)
+    self.model.compile(optimizer=optimizer, loss=loss)
+    return self.model
+
+  def layer_activations(self, k, X):
+    # compute activations for the kth layer
+    inp = self.model.input
+    out = self.model.layers[k].output
+    # https://stackoverflow.com/questions/41711190/keras-how-to-get-the-output-of-each-layer
+    func = K.function([inp]+[K.learning_phase()], [out])
+    return func([X, 0.])[0]
