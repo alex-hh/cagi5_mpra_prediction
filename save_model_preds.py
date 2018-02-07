@@ -25,7 +25,7 @@ def main(seqfeatextractor, alllayers=0):
     layers = ['15']
   elif seqfeatextractor == 'danqpy2':
     pass
-  elif re.find('dq', seqfeatextractor):
+  elif re.search('dq', seqfeatextractor):
     if alllayers:
       layers = [3,5,11]
     else:
