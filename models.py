@@ -98,9 +98,11 @@ class DSDataKerasModel(BaseModel):
     fname = 'data/cagi5_mpra/{}_ref_preds.npy'.format(self.experiment_name + suffix)
     train_inds = df.index.values
     if os.path.isfile(fname):
+      print('loading saved preds')
       ref_p = np.load(fname)[train_inds]
       alt_p = np.load(fname)[train_inds]
     else:
+      print('calculating preds')
       ref_p, alt_p = self.get_refalt_preds(df)
     return snp_feats_from_preds(ref_p, alt_p, self.feattypes)
 
