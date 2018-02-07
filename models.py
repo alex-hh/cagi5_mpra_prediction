@@ -6,7 +6,8 @@ import xgboost as xgb
 from sklearn.linear_model import LogisticRegression
 from sklearn.utils.class_weight import compute_sample_weight
 
-from utils import snp_feats_from_preds, encode_sequences
+from utils import encode_sequences
+from sequence_feats import snp_feats_from_preds
 from cagi5_utils import get_breakpoint_df, get_chunk_counts
 
 class BaseModel:

@@ -3,7 +3,7 @@ import sys
 
 import pandas as pd
 
-from utils import snpfeats_from_df, seqfeats_from_df
+from sequence_feats import snp_feats_from_preds
 # absdiff = snpfeats_from_df(df, 1000)
 
 def main(seqfeatextractor, alllayers=0):
@@ -34,7 +34,7 @@ def main(seqfeatextractor, alllayers=0):
   refp, altp = seqfeats_from_df(df, use_gpu=False, seqlen=1000,
                                 layers=layers)
   print('ref preds shape', refp.shape, flush=True)
-  
+
   suffix = ''
   if alllayers:
     suffix = '-all'
