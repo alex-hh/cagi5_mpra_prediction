@@ -62,7 +62,7 @@ class DSDataKerasModel(BaseModel):
     super().__init__(multiclass=multiclass, classifier_kwargs=classifier_kwargs,
                      classifier=classifier, verbose=verbose)
 
-  def get_features(self, df):
+  def get_refalt_preds(self, df):
     assert 'ref_sequence' in df.columns
     ref_onehot = encode_sequences(df['ref_sequence'], seqlen=1000)
     alt_onehot = encode_sequences(df['alt_sequence'], seqlen=1000)
@@ -82,7 +82,10 @@ class DSDataKerasModel(BaseModel):
         alt_ps.append(alt_p)
       ref_p = np.concatenate(ref_ps, axis=1)
       alt_p = np.concatenate(alt_ps, axis=1)
+    return ref_p, alt_p
 
+  def get_features(self, df):
+    ref_p, alt_p = self.get_refalt_preds(df)
     return snp_feats_from_preds(ref_p, alt_p, self.feattypes)
 
   def get_trained_model(self):
