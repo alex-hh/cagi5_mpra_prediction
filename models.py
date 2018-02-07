@@ -115,8 +115,8 @@ class DSDataKerasModel(BaseModel):
         endpoint = endpoints[ind]
         start = endpoint - all_sizes[ind]
         print(l, start, endpoint)
-        ref_ps.append(ref_p[start:endpoint])
-        alt_ps.append(alt_p[start:endpoint])
+        ref_ps.append(ref_p[:, start:endpoint])
+        alt_ps.append(alt_p[:, start:endpoint])
       ref_p = np.concatenate(ref_ps, axis=1)
       alt_p = np.concatenate(alt_ps, axis=1)
     else:
