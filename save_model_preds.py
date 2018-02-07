@@ -3,7 +3,7 @@ import sys
 
 import pandas as pd
 
-from sequence_feats import snp_feats_from_preds
+from sequence_feats import seqfeats_from_df
 # absdiff = snpfeats_from_df(df, 1000)
 
 def main(seqfeatextractor, alllayers=0):
