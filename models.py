@@ -78,6 +78,9 @@ class DSDataKerasModel(BaseModel):
       for l in self.layers:
         ref_p = self.model_class.layer_activations(l, ref_onehot)
         alt_p = self.model_class.layer_activations(l, alt_onehot)
+        if len(ref_p.shape)==3:
+          ref_p = np.mean(ref_p, axis=1)
+          alt_p = np.mean(alt_p, axis=1)
         ref_ps.append(ref_p)
         alt_ps.append(alt_p)
       ref_p = np.concatenate(ref_ps, axis=1)
