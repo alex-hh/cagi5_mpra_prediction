@@ -97,7 +97,7 @@ class DSDataKerasModel(BaseModel):
       suffix = '-all'
     reffname = 'data/cagi5_mpra/{}_ref_preds.npy'.format(self.experiment_name + suffix)
     train_inds = df.index.values
-    if os.path.isfile(fname):
+    if os.path.isfile(reffname):
       print('loading saved preds', reffname)
       ref_p = np.load(reffname)[train_inds]
       alt_p = np.load(reffname.replace('ref', 'alt'))[train_inds]
