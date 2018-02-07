@@ -1,3 +1,5 @@
+import os
+
 import pickle
 import numpy as np
 import pandas as pd
@@ -54,11 +56,13 @@ class DeepSeaSNP(BaseModel):
 
 
 class DSDataKerasModel(BaseModel):
-  def __init__(self, experiment_name, feattypes=['absdiff'], layers=[],
+  def __init__(self, experiment_name, feattypes=['absdiff'], 
+               alllayers=False, layers=[],
                verbose=False, multiclass='ovr', classifier='lr', classifier_kwargs={}):
     self.feattypes = feattypes
     self.experiment_name = experiment_name
     self.layers = layers
+    self.alllayers = alllayers
     super().__init__(multiclass=multiclass, classifier_kwargs=classifier_kwargs,
                      classifier=classifier, verbose=verbose)
 
@@ -88,7 +92,16 @@ class DSDataKerasModel(BaseModel):
     return ref_p, alt_p
 
   def get_features(self, df):
-    ref_p, alt_p = self.get_refalt_preds(df)
+    suffix = ''
+    if self.alllayers:
+      suffix = '-all'
+    fname = 'data/cagi5_mpra/{}_ref_preds.npy'.format(self.experiment_name + suffix)
+    train_inds = df.index.values
+    if os.path.isfile(fname):
+      ref_p = np.load(fname)[train_inds]
+      alt_p = np.load(fname)[train_inds]
+    else:
+      ref_p, alt_p = self.get_refalt_preds(df)
     return snp_feats_from_preds(ref_p, alt_p, self.feattypes)
 
   def get_trained_model(self):
@@ -178,6 +191,7 @@ class EnhancerOneHot(BaseModel):
     enhancers = df['regulatory_element'].astype('category', categories=self.enh_names)
     onehot = pd.get_dummies(enhancers, drop_first=True).values
     # print(onehot.shape)
+    # other features: enhancer mean, enhancer same substitution
     return onehot
 
 class MPRATransfer(BaseModel):
