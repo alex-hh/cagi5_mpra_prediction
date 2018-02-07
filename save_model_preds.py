@@ -4,6 +4,7 @@ import sys
 import pandas as pd
 
 from sequence_feats import seqfeats_from_df
+from utils import get_seqs_and_inds
 # absdiff = snpfeats_from_df(df, 1000)
 
 def main(seqfeatextractor, alllayers=0):
