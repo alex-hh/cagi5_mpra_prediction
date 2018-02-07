@@ -2,6 +2,7 @@ import re
 import sys
 
 import pandas as pd
+import numpy as np
 
 from sequence_feats import seqfeats_from_df
 from utils import get_seqs_and_inds
