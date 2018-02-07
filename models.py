@@ -95,12 +95,12 @@ class DSDataKerasModel(BaseModel):
     suffix = ''
     if self.alllayers:
       suffix = '-all'
-    fname = 'data/cagi5_mpra/{}_ref_preds.npy'.format(self.experiment_name + suffix)
+    reffname = 'data/cagi5_mpra/{}_ref_preds.npy'.format(self.experiment_name + suffix)
     train_inds = df.index.values
     if os.path.isfile(fname):
-      print('loading saved preds')
-      ref_p = np.load(fname)[train_inds]
-      alt_p = np.load(fname)[train_inds]
+      print('loading saved preds', reffname)
+      ref_p = np.load(reffname)[train_inds]
+      alt_p = np.load(reffname.replace('ref', 'alt'))[train_inds]
     else:
       print('calculating preds')
       ref_p, alt_p = self.get_refalt_preds(df)
