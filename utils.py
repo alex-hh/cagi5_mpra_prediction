@@ -5,7 +5,6 @@ import numpy as np
 
 from constants import LOCS
 from collections import defaultdict
-from models import DSDataKerasModel
 
 
 def compute_row_ref(row, base_seq_dict, use_modified=True):
