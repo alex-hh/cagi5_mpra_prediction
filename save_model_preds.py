@@ -32,8 +32,8 @@ def main(seqfeatextractor, alllayers=0):
       layers = [11]
 
   print('getting preds', flush=True)
-  refp, altp = seqfeats_from_df(df, use_gpu=False, seqlen=1000,
-                                layers=layers)
+  refp, altp = seqfeats_from_df(df, use_gpu=False, seqlen=1000, # target sequence length - i.e. how much padding should be applied
+                                layers=layers, seqfeatextractor=seqfeatextractor)
   print('ref preds shape', refp.shape, flush=True)
 
   suffix = ''
