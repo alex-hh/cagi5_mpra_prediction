@@ -1,8 +1,36 @@
+
+# Repo Overview
+
+## Important Files/Directories
+
+* data/cagi5_mpra:
+  contains reference sequences for all enhancers (base_seqs.py), plus deepsea predictions for ref and alt alleles for all of the training data.
+* data/cagi5_df.csv:
+  the training data with added conservation information converted into csv format
+* data/release.xlsx:
+  raw training data
+* conservation/
+  a clone of some of the code from the keras codebase used for the deepsea prediction tasks included to make importing models trained on that task easier
+* crossval.py
+  helpers for cross validation (see below)
+* models.py
+  helpers for featurisation/prediction (see below)
+* utils.py
+  generic helper functions (including some relating to data from the previous year's challenge (i.e. cagi4))
+* cagi5_utils.py
+  cagi5-specific helper-functions 
+
+# Notes on Code
+
 The code basically consists of helpers for pre-processing the data, helpers for cross-validation and helpers for featurisation/prediction.
 
 Examples of the full cross-validation training + evaluation process are in the notebook Cagi5CV.ipynb
 
+
 ## Setup
+
+N.B. this is only necessary if you want to redo any preprocessing or generate features using models I've trained on the deepsea data whose weights are saved in my scratch space.
+All the data needed to perform cross validation using DeepSEA features is in this repo already.
 
 To enable the loading of keras model weights and genomic data from my scratch drive, I use two empty subdirectories within this repo: data/remote_results and data/remote_data, which are excluded from git.
 
@@ -11,9 +39,10 @@ Depending on whether I'm working on my laptop or directly on the version of this
   * data/remote_results to /scratch/arh96/consresults
   * data/remote_data to /scratch/arh96/conservation/data
 
+
 ## Pre-processing
 
-save_base_seqs saves the reference sequences in data/cagi5_mpra/base_seqs.csv, based on genomic coords
+utils.save_base_seqs saves the reference sequences in data/cagi5_mpra/base_seqs.csv, based on genomic coords
 
 read_xlxs.py converts the excel formatted data to a pandas df.
 
@@ -38,7 +67,7 @@ crossval.cvpreds_df_enhancer_folds plays a similar role to ChunkCV, but the cros
 
 ## Models
 
-Inheriting from the BaseModel class in models, individual models implement a single method, get_features, which takes as input a training data frame, and returns a numpy array representing the feature matrix.
+Inheriting from the BaseModel class in models.py, individual model classes implement a single method, get_features, which takes as input a training data frame, and returns a numpy array representing the feature matrix.
 
 the fit method of the parent BaseModel class then uses the SKLearn interface to train either a logistic regression or xgboost classifier using these features. 
 
@@ -46,7 +75,7 @@ I’ve currently written it so that there is a single class per feature type (i.
 
 ### Getting DeepSea task predictions as features
 
-There are two classes that can be used here:
+There are two classes that can be used here (defined in models.py):
 
   1. DeepSeaSNP: to use the original DeepSea model (whose predictions for ref and alt alleles for the full training dataset are included in the repo as data/cagi5_mpra/deepsea_ref_preds.npy and data/cagi5_mpra/deepsea_alt_preds.npy)
 
