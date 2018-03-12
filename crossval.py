@@ -87,36 +87,37 @@ def df_cv_split(breakpoint_df, nf):
   fold_dict = pick_train_chunks(chunk_counts, nf=nf)
   return fold_dict
 
-def cvpreds_df_chunk_folds(df, model_class, model_args=[], model_kwargs={}, nf=5):
-  model = model_class(*model_args, **model_kwargs)
-  df['cv_prediction'] = np.nan
+# superseded by the ChunkCV class
+# def cvpreds_df_chunk_folds(df, model_class, model_args=[], model_kwargs={}, nf=5):
+#   model = model_class(*model_args, **model_kwargs)
+#   df['cv_prediction'] = np.nan
 
-  breakpoint_df = get_breakpoint_df(df)
-  breakpoint_df['is_start'] = breakpoint_df['is_break'] == 'start'
-  breakpoint_df['chunk_id'] = breakpoint_df.groupby(['regulatory_element'])['is_start'].cumsum() - 1
+#   breakpoint_df = get_breakpoint_df(df)
+#   breakpoint_df['is_start'] = breakpoint_df['is_break'] == 'start'
+#   breakpoint_df['chunk_id'] = breakpoint_df.groupby(['regulatory_element'])['is_start'].cumsum() - 1
 
-  assert np.sum(breakpoint_df['chunk_length']) == sum(df.groupby(['regulatory_element'])['Pos'].nunique())
-  chunk_counts = get_chunk_counts(breakpoint_df)
-  fold_dict = pick_train_chunks(chunk_counts, nf=nf)
+#   assert np.sum(breakpoint_df['chunk_length']) == sum(df.groupby(['regulatory_element'])['Pos'].nunique())
+#   chunk_counts = get_chunk_counts(breakpoint_df)
+#   fold_dict = pick_train_chunks(chunk_counts, nf=nf)
   
-  for f in range(nf):
-    trainvaldf = train_val_split(fold_dict, breakpoint_df, f)
-    train_df = trainvaldf[trainvaldf['is_train']]
-    val_df = trainvaldf[~trainvaldf['is_train']]
+#   for f in range(nf):
+#     trainvaldf = train_val_split(fold_dict, breakpoint_df, f)
+#     train_df = trainvaldf[trainvaldf['is_train']]
+#     val_df = trainvaldf[~trainvaldf['is_train']]
 
-    X_train = model.get_features(train_df)
-    y_train = train_df['class']
+#     X_train = model.get_features(train_df)
+#     y_train = train_df['class']
 
-    model.fit(X_train, y_train)
+#     model.fit(X_train, y_train)
 
-    X_val = model.get_features(val_df)
-    y_val = val_df['class']
+#     X_val = model.get_features(val_df)
+#     y_val = val_df['class']
 
-    preds = model.predict(X_val)
+#     preds = model.predict(X_val)
 
-    breakpoint_df.loc[~breakpoint_df['is_train'], 'cv_prediction'] = preds
+#     breakpoint_df.loc[~breakpoint_df['is_train'], 'cv_prediction'] = preds
 
-  return breakpoint_df
+#   return breakpoint_df
 
 
 

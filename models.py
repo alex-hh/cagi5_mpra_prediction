@@ -37,7 +37,7 @@ class BaseModel:
 
 class DeepSeaSNP(BaseModel):
   
-  def __init__(self, use_saved_preds=True, feattypes=['absdiff'],
+  def __init__(self, use_saved_preds=True, feattypes=['diff'],
                verbose=False, multiclass='ovr', classifier='lr', classifier_kwargs={}):
     self.use_saved_preds = use_saved_preds
     self.feattypes = feattypes
@@ -54,7 +54,7 @@ class DeepSeaSNP(BaseModel):
 
 
 class DSDataKerasModel(BaseModel):
-  def __init__(self, experiment_name, feattypes=['absdiff'], layers=[],
+  def __init__(self, experiment_name, feattypes=['diff'], layers=[],
                verbose=False, multiclass='ovr', classifier='lr', classifier_kwargs={}):
     self.feattypes = feattypes
     self.experiment_name = experiment_name
