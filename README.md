@@ -47,7 +47,9 @@ I’ve currently written it so that there is a single class per feature type (i.
 ### Getting DeepSea task predictions as features
 
 There are two classes that can be used here:
+
   1. DeepSeaSNP: to use the original DeepSea model (whose predictions for ref and alt alleles for the full training dataset are included in the repo as data/cagi5_mpra/deepsea_ref_preds.npy and data/cagi5_mpra/deepsea_alt_preds.npy)
+
   2. DSDataKerasModel: to use predictions from a saved keras model trained on the deepsea data.
 
 
