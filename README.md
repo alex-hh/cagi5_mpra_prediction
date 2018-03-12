@@ -2,6 +2,15 @@ The code basically consists of helpers for pre-processing the data, helpers for 
 
 Examples of the full cross-validation training + evaluation process are in the notebook Cagi5CV.ipynb
 
+## Setup
+
+To enable the loading of keras model weights and genomic data from my scratch drive, I use two empty subdirectories within this repo: data/remote_results and data/remote_data, which are excluded from git.
+
+Depending on whether I'm working on my laptop or directly on the version of this repo I maintain in my hpc workspace I then use sshfs / symbolic links to point
+
+data/remote_results to /scratch/arh96/consresults
+data/remote_data to /scratch/arh96/conservation/data
+
 ## Pre-processing
 
 save_base_seqs saves the reference sequences in data/cagi5_mpra/base_seqs.csv, based on genomic coords
@@ -37,9 +46,15 @@ I’ve currently written it so that there is a single class per feature type (i.
 
 ### Getting DeepSea task predictions as features
 
-I’ve found that using the set of 919 difference features (ref_pred - alt_pred) for each deepsea task works better than other alternatives (absolute difference, log odds, difference + log odds). The choice of feature type(s) to use can be specified via the feattypes argument to DSDataKerasModel, which should be a list containing as entries any subset of: ‘diff’, ‘absdiff’, ‘odds’, ‘absodds’, ‘scaleddiff’. The default (which I expect to generally be the best, especially if we want to predict the direction of the effect) is just [‘diff’]
+There are two classes that can be used here:
+ 1. DeepSeaSNP: to use the original DeepSea model (whose predictions for ref and alt alleles for the full training dataset are included in the repo as data/cagi5_mpra/deepsea_ref_preds.npy and data/cagi5_mpra/deepsea_alt_preds.npy)
+ 2. DSDataKerasModel: to use predictions from a saved keras model trained on the deepsea data.
 
-Generating the features from the training data. relies on a couple of helper functions. To compute on the fly using DSDataKerasModel:
+
+I’ve found that using the set of 919 difference features (ref_pred - alt_pred) for each deepsea task works better than other alternatives (absolute difference, log odds, difference + log odds). The choice of feature type(s) to use can be specified via the feattypes argument to DSDataKerasModel/DeepSeaSNP, which should be a list containing as entries any subset of: ‘diff’, ‘absdiff’, ‘odds’, ‘absodds’, ‘scaleddiff’. The default (which I expect to generally be the best, especially if we want to predict the direction of the effect) is just [‘diff’]
+
+To generate these features for a given training dataframe, the DSDataKerasModel class will first look for a set of saved predictions in the directory 'data/cagi5_mpra/EXPERIMENT_ref_preds.npy', where EXPERIMENT is the name of the deepsea experiment to be used. If this is not found, it will generate the predictions on the fly. Doing this relies on a couple of helper functions.
+
 
 1) ‘ref_sequence’ and ‘alt_sequence’ columns containing the first two outputs of utils.get_check_sequences_cagi5, and representing the full sequences for ref and alt alleles must be added to the data frame before passing it to the CV handler (ChunkCV). get_check_sequences_cagi5 uses the enhancer id to get the reference sequence from the set of reference sequences saved in the first preprocessing step above, and from this sequence computes the appropriate full alternate allele sequence based on the genomic coordinates of the variants and of the start/end points of the enhancer sequence.
 

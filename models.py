@@ -1,3 +1,5 @@
+import os
+
 import pickle
 import numpy as np
 import pandas as pd
@@ -54,15 +56,18 @@ class DeepSeaSNP(BaseModel):
 
 
 class DSDataKerasModel(BaseModel):
-  def __init__(self, experiment_name, feattypes=['diff'], layers=[],
+
+  def __init__(self, experiment_name, feattypes=['diff'], 
+               alllayers=False, layers=[],
                verbose=False, multiclass='ovr', classifier='lr', classifier_kwargs={}):
     self.feattypes = feattypes
     self.experiment_name = experiment_name
     self.layers = layers
+    self.alllayers = alllayers
     super().__init__(multiclass=multiclass, classifier_kwargs=classifier_kwargs,
                      classifier=classifier, verbose=verbose)
 
-  def get_features(self, df):
+  def get_refalt_preds(self, df):
     assert 'ref_sequence' in df.columns
     ref_onehot = encode_sequences(df['ref_sequence'], seqlen=1000)
     alt_onehot = encode_sequences(df['alt_sequence'], seqlen=1000)
@@ -85,7 +90,39 @@ class DSDataKerasModel(BaseModel):
         alt_ps.append(alt_p)
       ref_p = np.concatenate(ref_ps, axis=1)
       alt_p = np.concatenate(alt_ps, axis=1)
+    return ref_p, alt_p
 
+  def get_features(self, df):
+    suffix = ''
+    if self.alllayers:
+      suffix = '-all'
+    reffname = 'data/cagi5_mpra/{}_ref_preds.npy'.format(self.experiment_name + suffix)
+    train_inds = df.index.values
+    if os.path.isfile(reffname):
+
+      print('loading saved preds', reffname)
+      ref_p = np.load(reffname)[train_inds]
+      alt_p = np.load(reffname.replace('ref', 'alt'))[train_inds]
+
+      self.model_class = self.get_untrained_model()
+      all_layers = [3,5,11]
+      all_sizes = [self.model_class.model.layers[l].output_shape[-1] for l in all_layers]
+      assert np.sum(all_sizes) == ref_p.shape[1]
+
+      endpoints = np.cumsum(all_sizes)
+      ref_ps, alt_ps = [], []
+      for l in self.layers:
+        ind = all_layers.index(l)
+        endpoint = endpoints[ind]
+        start = endpoint - all_sizes[ind]
+        print(l, start, endpoint)
+        ref_ps.append(ref_p[:, start:endpoint])
+        alt_ps.append(alt_p[:, start:endpoint])
+      ref_p = np.concatenate(ref_ps, axis=1)
+      alt_p = np.concatenate(alt_ps, axis=1)
+    else:
+      print('calculating preds')
+      ref_p, alt_p = self.get_refalt_preds(df)
     return snp_feats_from_preds(ref_p, alt_p, self.feattypes)
 
   def get_trained_model(self):
@@ -175,6 +212,7 @@ class EnhancerOneHot(BaseModel):
     enhancers = df['regulatory_element'].astype('category', categories=self.enh_names)
     onehot = pd.get_dummies(enhancers, drop_first=True).values
     # print(onehot.shape)
+    # other features: enhancer mean, enhancer same substitution
     return onehot
 
 class MPRATransfer(BaseModel):
