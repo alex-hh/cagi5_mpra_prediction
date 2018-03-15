@@ -4,4 +4,5 @@ pandas
 sklearn
 xgboost
 matplotlib
+pysam
 neovim
