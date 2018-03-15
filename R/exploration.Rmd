@@ -1,0 +1,92 @@
+---
+title: "Exploration of CAGI5 data"
+output:
+  html_document:
+    theme: united
+    highlight: tango
+    toc: true
+    toc_float:
+      collapsed: false
+    fig_width: 7
+    fig_height: 6
+    fig_caption: true
+    df_print: paged
+    # mathjax: local
+    # self_contained: false
+---
+
+```{r render, eval = FALSE, echo = FALSE}
+rmarkdown::render('exploration.Rmd')
+```
+
+## Setup
+```{r loadPkgs}
+# source("https://bioconductor.org/biocLite.R")
+# biocLite("Gviz")
+library(Gviz)
+library(GenomicRanges)
+library(BSgenome.Hsapiens.UCSC.hg19)
+library(tidyverse)
+library(stringr)
+data(geneModels)
+```
+
+
+## Test data
+```{r loadTraining}
+training_file = '../data/cagi5_df.csv'
+training_df <-
+  read_csv(training_file) %>%
+  rename("chrom" = !!names(.[1])) %>%
+  mutate(
+      chrom = str_c('chr', chrom),
+      elem = str_sub(regulatory_element, 9))
+elements <- unique(training_df$elem)
+element_dfs <- training_df %>% split(.$elem)
+nrow(training_df)
+sample_n(training_df, 50)
+```
+
+```{r testGRanges}
+element_grs <-
+  lapply(
+    element_dfs,
+    partial(
+      makeGRangesFromDataFrame,
+      keep.extra.columns = TRUE,
+      start.field = 'Pos',
+      end.field = 'Pos',
+      ignore.strand = TRUE))
+```
+
+Plot the training data for each regulatory element.
+```{r vizTraining}
+plot_element <- function(gr) {
+  chr <- as.character(chrom(gr)[1])
+  genome_tr <- GenomeAxisTrack(chromosome = chr)
+  value_tr <- DataTrack(gr, data = 'Value', name = 'Value', col = 'red')
+  conf_tr <- DataTrack(gr, data = 'Confidence', name = 'Confidence', col = 'blue')
+  gene_tr <- GeneRegionTrack(geneModels, genome = 'hg19', chromosome = chr, name = "genes")
+  seq_tr <- SequenceTrack(Hsapiens, chromosome = chr, name = 'sequence')
+  plotTracks(
+      list(genome_tr, gene_tr, value_tr, seq_tr, conf_tr),
+      from = min(start(gr)),
+      to = max(end(gr)))
+}
+for (elem in elements) {
+  print(elem)
+  print(element_dfs[[elem]]$chrom[1])
+  plot_element(element_grs[[elem]])
+}
+```
+
+
+
+## Training data
+```{r loadTest}
+test_file = '../data/cagi5_mpra/TestDataset.txt'
+test_df <- read_tsv(test_file, col_types='ciccc')
+nrow(test_df)
+sample_n(test_df, 50)
+```
+
