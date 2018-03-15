@@ -1,0 +1,15 @@
+#
+# Determine directory script is in: may only work for bash
+called=$_
+# [[ $called != $0 ]] && echo "Script is being sourced" || echo "Script is being run"
+# echo "\$BASH_SOURCE ${BASH_SOURCE[@]}"
+export CAGIDIR=$(readlink -f $(dirname "$called"))
+echo "Project directory: $CAGIDIR"
+
+#
+# Activate virtual environment
+source venv3/bin/activate
+
+#
+# Add directory to path
+export PATH=$CAGIDIR/bin:$PATH

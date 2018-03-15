@@ -1,0 +1,7 @@
+jupyter
+scipy
+pandas
+sklearn
+xgboost
+matplotlib
+neovim
