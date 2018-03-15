@@ -25,14 +25,27 @@ class CVOperator:
     return preds
 
 def cvpreds_df_enhancer_folds(df, model_class, model_args=[], model_kwargs={}):
+  #
+  # Get/create model from args
   model = model_class(*model_args, **model_kwargs)
+  #
+  # Add CV prediction column
   df['cv_prediction'] = np.nan
+  #
+  # Add base element column if doesn't already exist,
+  # some funny business matching different TERT regulatory elements
   if 'base_element' not in df.columns:
     df['base_element'] = df.apply(lambda row: row['regulatory_element'][8:], axis=1)
     df['base_element'] = df.apply(lambda row: 'TERT' if re.match('TERT', row['base_element'])\
                                   else row['base_element'], axis=1)
+  #
+  # For each base element for validation
   for val_element in df['base_element'].unique():
+    #
+    # Get the training data for the element
     train_df = df[df['base_element']!=val_element]
+    #
+    # 
     val_df = df[df['base_element']==val_element]
     train_inds = train_df.index.values
     val_inds = val_df.index.values
