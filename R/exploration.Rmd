@@ -7,7 +7,7 @@ output:
     toc: true
     toc_float:
       collapsed: false
-    fig_width: 7
+    fig_width: 10
     fig_height: 6
     fig_caption: true
     df_print: paged
@@ -35,6 +35,7 @@ data(geneModels)
 theme_set(theme_few())
 scale_colour_discrete <- scale_colour_few
 scale_fill_discrete <- scale_fill_few
+dir.create('../plots', showWarnings = FALSE)
 ```
 
 
@@ -119,7 +120,7 @@ across all alternate alleles. Then for each pair of positions closer than some
 threshold, we threshold the first position has having a high or low value and
 investigate if the distributions of values at nearby positions are different
 conditioned on this.
-```{r effectCorr}
+```{r effectCorr, fig.width = 16, fig.height = 12}
 conf_threshold <- .15
 value_threshold <- .3
 dist_threshold <- 40
@@ -153,6 +154,7 @@ ggplot(
     aes(x = dist_factor, y = MaxAbsValue2, fill = HighValue1)) +
   geom_boxplot() +
   facet_wrap(~ elem)
+ggsave('../plots/spatial.pdf', width = 16, height = 12, units = 'in')
 ```
 
 
