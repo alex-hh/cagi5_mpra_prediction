@@ -27,17 +27,23 @@ library(Gviz)
 library(GenomicRanges)
 library(BSgenome.Hsapiens.UCSC.hg19)
 library(tidyverse)
+library(reshape2)
 library(stringr)
+library(ggplot2)
+library(ggthemes)
 data(geneModels)
+theme_set(theme_few())
+scale_colour_discrete <- scale_colour_few
+scale_fill_discrete <- scale_fill_few
 ```
 
 
 ## Test data
 ```{r loadTraining}
-training_file = '../data/cagi5_df.csv'
+training_file = '../data/cagi5_bkpt.csv'
 training_df <-
   read_csv(training_file) %>%
-  rename("chrom" = !!names(.[1])) %>%
+  rename("chrom" = !!names(.[2])) %>%
   mutate(
       chrom = str_c('chr', chrom),
       elem = str_sub(regulatory_element, 9))
@@ -79,6 +85,76 @@ for (elem in elements) {
   plot_element(element_grs[[elem]])
 }
 ```
+
+
+
+## Value distribution
+```{r valueDist}
+ggplot(training_df, aes(x = Value)) + geom_histogram(binwidth=.1)
+```
+
+
+
+## Confidence distribution
+```{r confDist}
+ggplot(training_df, aes(x = Confidence)) + geom_histogram()
+```
+
+
+
+## Confidence against value
+We plot the confidence against the value. Some high absolute values have low confidences and vice versa.
+```{r confValue}
+ggplot(training_df, aes(x = Value, y = Confidence, colour = elem)) +
+  geom_point(alpha = .3) +
+  scale_colour_pander()
+```
+
+
+
+## Spatial effects
+Look at whether high values are spatially correlated. We first summarise the
+data by position, calculating the maximum absolute value at each position
+across all alternate alleles. Then for each pair of positions closer than some
+threshold, we threshold the first position has having a high or low value and
+investigate if the distributions of values at nearby positions are different
+conditioned on this.
+```{r effectCorr}
+conf_threshold <- .15
+value_threshold <- .3
+dist_threshold <- 40
+spatial_corr <- function(.df) {
+  summary_df <-
+    .df %>%
+    group_by(Pos) %>%
+    summarise(MaxAbsValue = max(abs(Value)), MaxConf=max(Confidence))
+  .df1 <-
+    summary_df %>%
+    rename(Pos1 = Pos, MaxAbsValue1 = MaxAbsValue, MaxConf1 = MaxConf)
+  .df2 <-
+    summary_df %>%
+    rename(Pos2 = Pos, MaxAbsValue2 = MaxAbsValue, MaxConf2 = MaxConf)
+  expand.grid(Pos1 = .df1$Pos1, Pos2 = .df2$Pos2) %>%
+    mutate(pos_dist = abs(Pos1 - Pos2)) %>%
+    filter(pos_dist > 0, pos_dist <= dist_threshold) %>%
+    mutate(
+        dist_factor =
+          cut(pos_dist,
+              breaks = seq(0, dist_threshold, by = 5),
+              include.lowest = TRUE)) %>%
+    left_join(.df1, by = 'Pos1') %>%
+    mutate(HighValue1 = MaxAbsValue1 >= value_threshold) %>%
+    left_join(.df2, by = 'Pos2') %>%
+    mutate(val_diff = abs(MaxAbsValue1 - MaxAbsValue2))
+}
+spatial_df <- bind_rows(lapply(element_dfs, spatial_corr), .id = 'elem')
+ggplot(
+    spatial_df,
+    aes(x = dist_factor, y = MaxAbsValue2, fill = HighValue1)) +
+  geom_boxplot() +
+  facet_wrap(~ elem)
+```
+
 
 
 
