@@ -16,6 +16,8 @@ output:
 ---
 
 ```{r render, eval = FALSE, echo = FALSE}
+#
+# Run this chunk to render this document
 rmarkdown::render('exploration.Rmd')
 ```
 
@@ -24,6 +26,9 @@ rmarkdown::render('exploration.Rmd')
 # source("https://bioconductor.org/biocLite.R")
 # biocLite("Gviz")
 library(Gviz)
+data(geneModels)
+library(ggbio)
+data(hg19Ideogram, package = "biovizBase")
 library(GenomicRanges)
 library(BSgenome.Hsapiens.UCSC.hg19)
 library(tidyverse)
@@ -31,7 +36,6 @@ library(reshape2)
 library(stringr)
 library(ggplot2)
 library(ggthemes)
-data(geneModels)
 theme_set(theme_few())
 scale_colour_discrete <- scale_colour_few
 scale_fill_discrete <- scale_fill_few
@@ -68,7 +72,12 @@ element_grs <-
 
 Plot the training data for each regulatory element.
 ```{r vizTraining}
-plot_element <- function(gr) {
+plot_element <- function(.df) {
+  ggplot(.df, aes(x = Pos, y = Value, colour = Confidence)) +
+    geom_point() +
+    scale_colour_gradient(limits = c(0, 1), low = 'blue', high = 'red')
+}
+plot_element_gviz <- function(gr) {
   chr <- as.character(chrom(gr)[1])
   genome_tr <- GenomeAxisTrack(chromosome = chr)
   value_tr <- DataTrack(gr, data = 'Value', name = 'Value', col = 'red')
@@ -83,7 +92,8 @@ plot_element <- function(gr) {
 for (elem in elements) {
   print(elem)
   print(element_dfs[[elem]]$chrom[1])
-  plot_element(element_grs[[elem]])
+  print(plot_element(element_dfs[[elem]]))
+  # plot_element_gviz(element_grs[[elem]]))
 }
 ```
 
