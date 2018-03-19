@@ -1,9 +1,11 @@
 import os
 
+import multiprocessing
 import pickle
 import numpy as np
 import pandas as pd
 import xgboost as xgb
+from abc import ABC, abstractmethod
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.utils.class_weight import compute_sample_weight
@@ -11,11 +13,18 @@ from sklearn.utils.class_weight import compute_sample_weight
 from utils import snp_feats_from_preds, encode_sequences
 from cagi5_utils import get_breakpoint_df, get_chunk_counts
 
-class BaseModel:
 
-  def __init__(self, classifier='lr',
-               multiclass='ovr',
-               classifier_kwargs={}, verbose=False):
+
+class Classifier(object):
+
+  def __init__(
+      self,
+      features,
+      classifier='lr',
+      multiclass='ovr',
+      classifier_kwargs={},
+      verbose=False):
+    self.features = features
     self.classifier_kwargs = classifier_kwargs
     self.classifier = classifier
     self.multiclass=multiclass
@@ -28,7 +37,7 @@ class BaseModel:
     if self.classifier == 'lr':
       self.lr = LogisticRegression(penalty='l2', C=0.01, multi_class=self.multiclass)
     elif self.classifier == 'xgb':
-      self.lr = xgb.XGBClassifier(**self.classifier_kwargs)
+      self.lr = xgb.XGBClassifier(**self.classifier_kwargs, n_jobs=multiprocessing.cpu_count() - 1)
     sample_weight = compute_sample_weight('balanced', y) # not sure if classes need to be labelled 0,1,2 (if so can use label encoder)
     self.lr.fit(X, y, sample_weight=sample_weight)
     if self.verbose:
@@ -37,14 +46,25 @@ class BaseModel:
   def predict(self, X):
     return self.lr.predict(X)
 
-class DeepSeaSNP(BaseModel):
-  
-  def __init__(self, use_saved_preds=True, feattypes=['diff'],
-               verbose=False, multiclass='ovr', classifier='lr', classifier_kwargs={}):
+  def get_features(self, df):
+    return self.features.get_features(df)
+
+
+class Features(ABC):
+  """
+  Abstract base class for features.
+  """
+
+  @abstractmethod
+  def get_features(self, df):
+    pass
+
+
+class DeepSeaSNP(Features):
+
+  def __init__(self, use_saved_preds=True, feattypes=['diff']):
     self.use_saved_preds = use_saved_preds
     self.feattypes = feattypes
-    super().__init__(multiclass=multiclass, classifier_kwargs=classifier_kwargs,
-                     classifier=classifier, verbose=verbose)
 
   def get_features(self, df):
     if self.use_saved_preds:
@@ -55,17 +75,13 @@ class DeepSeaSNP(BaseModel):
     return snp_feats_from_preds(train_ref, train_alt, self.feattypes)
 
 
-class DSDataKerasModel(BaseModel):
+class DSDataKerasModel(Features):
 
-  def __init__(self, experiment_name, feattypes=['diff'], 
-               alllayers=False, layers=[],
-               verbose=False, multiclass='ovr', classifier='lr', classifier_kwargs={}):
+  def __init__(self, experiment_name, feattypes=['diff'], alllayers=False, layers=[]):
     self.feattypes = feattypes
     self.experiment_name = experiment_name
     self.layers = layers
     self.alllayers = alllayers
-    super().__init__(multiclass=multiclass, classifier_kwargs=classifier_kwargs,
-                     classifier=classifier, verbose=verbose)
 
   def get_refalt_preds(self, df):
     assert 'ref_sequence' in df.columns
@@ -137,17 +153,15 @@ class DSDataKerasModel(BaseModel):
     model_class, model_args = settings['model_class'], settings['model_args'] 
     return model_class(**model_args)
 
-class SNPContext(BaseModel):
+
+class SNPContext(Features):
   # idea here is to use some kind of local information
-  def __init__(self, context_size=2, raw_aggs=['max', 'mean', 'median'], abs_aggs=[],
-               multiclass='ovr', classifier='lr', classifier_kwargs={}, verbose=False):
+  def __init__(self, context_size=2, raw_aggs=['max', 'mean', 'median'], abs_aggs=[]):
     # maybe also enable specification of what kinds of aggregate to perform
     self.context_size = context_size
     self.right_context_size = context_size // 2
     self.left_context_size = context_size - self.right_context_size
     self.raw_aggs = raw_aggs
-    super().__init__(multiclass=multiclass, classifier_kwargs=classifier_kwargs,
-                     classifier=classifier, verbose=verbose)
 
   def get_features(self, df):
     breakpoint_df = get_breakpoint_df(df)
@@ -184,28 +198,23 @@ class SNPContext(BaseModel):
       featmat[i,:] = context_features[(row['regulatory_element'], row['chunk_id'])]
     return featmat
 
-class Conservation(BaseModel):
-  def __init__(self, scores=['phastCon', 'phyloP', 'GerpN', 'GerpRS'],
-               multiclass='ovr', classifier='lr', classifier_kwargs={},
-               verbose=False):
+
+class Conservation(Features):
+  def __init__(self, scores=['phastCon', 'phyloP', 'GerpN', 'GerpRS']):
     self.scores = scores
-    super().__init__(multiclass=multiclass, classifier_kwargs=classifier_kwargs,
-                     classifier=classifier, verbose=verbose)
 
   def get_features(self, df):
     feat = df[self.scores]
     return feat
 
-class EnhancerOneHot(BaseModel):
+
+class EnhancerOneHot(Features):
   def __init__(self, enh_names=['release_F9', 'release_GP1BB', 'release_HBB', 'release_HBG1',
        'release_HNF4A', 'release_IRF4', 'release_IRF6', 'release_LDLR',
        'release_MSMB', 'release_MYCrs6983267', 'release_PKLR',
        'release_SORT1', 'release_TERT-GBM', 'release_TERT-HEK293T',
-       'release_ZFAND3'], multiclass='ovr', classifier='lr', classifier_kwargs={},
-               verbose=False):
+       'release_ZFAND3']):
     self.enh_names = enh_names
-    super().__init__(multiclass=multiclass, classifier_kwargs=classifier_kwargs,
-                     classifier=classifier, verbose=verbose)
 
   def get_features(self, df):
     # https://stackoverflow.com/questions/37425961/dummy-variables-when-not-all-categories-are-present
@@ -215,19 +224,14 @@ class EnhancerOneHot(BaseModel):
     # other features: enhancer mean, enhancer same substitution
     return onehot
 
-class MPRATransfer(BaseModel):
+
+class MPRATransfer(Features):
   pass
 
-class MixedModel(BaseModel):
-  def __init__(self, models=[], model_kwargs=[],
-               multiclass='ovr', classifier='lr', classifier_kwargs={},
-               verbose=False):
-    print(models)
-    self.models = [m(**kwargs) for m, kwargs in zip(models, model_kwargs)]
-    super().__init__(multiclass=multiclass, classifier_kwargs=classifier_kwargs,
-                     classifier=classifier, verbose=verbose)
+
+class MultiFeatures(Features):
+  def __init__(self, features):
+    self.features = features
 
   def get_features(self, df):
-    features = [m.get_features(df) for m in self.models]
-    features = np.concatenate(features, axis=1)
-    return features
+    return np.concatenate([f.get_features(df) for f in self.features], axis=1)

@@ -52,6 +52,8 @@ def cvpreds_df_enhancer_folds(df, model_class, model_args=[], model_kwargs={}):
 
     X_train = model.get_features(train_df)
     y_train = train_df['class']
+    # assert not np.any(np.isnan(X_train))
+    # assert not np.any(np.isnan(y_train))
 
     model.fit(X_train, y_train)
 
