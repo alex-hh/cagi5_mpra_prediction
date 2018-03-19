@@ -108,6 +108,15 @@ for (elem in elements) {
 ggplot(training_df, aes(x = Value)) + geom_histogram(binwidth=.1)
 # ggplot(training_df, aes(x = log10(abs(Value + 0.08)))) + geom_histogram(binwidth=.1)
 ```
+When the distribution of the effect size (Value) is conditioned on the direction we see
+an asymmetry. Remember if the confidence is less than .1, there is no significant effect,
+i.e. direction = 0.
+```{r valueByDirection}
+ggplot(training_df, aes(x = Value)) + geom_histogram(binwidth=.1) + facet_wrap(~ class)
+ggplot(training_df %>% filter(0 != class), aes(x = abs(Value), fill = factor(class))) +
+  geom_histogram(binwidth=.1, position = 'dodge')
+```
+
 
 
 
