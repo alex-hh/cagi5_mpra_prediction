@@ -73,9 +73,13 @@ element_grs <-
 Plot the training data for each regulatory element.
 ```{r vizTraining}
 plot_element <- function(.df) {
+
   ggplot(.df, aes(x = Pos, y = Value, colour = Confidence)) +
+    geom_hline(yintercept = 0, alpha = .3) +
     geom_point() +
+    # geom_smooth(aes(y = abs(Value))) +
     scale_colour_gradient(limits = c(0, 1), low = 'blue', high = 'red')
+
 }
 plot_element_gviz <- function(gr) {
   chr <- as.character(chrom(gr)[1])
@@ -102,6 +106,7 @@ for (elem in elements) {
 ## Value distribution
 ```{r valueDist}
 ggplot(training_df, aes(x = Value)) + geom_histogram(binwidth=.1)
+# ggplot(training_df, aes(x = log10(abs(Value + 0.08)))) + geom_histogram(binwidth=.1)
 ```
 
 
