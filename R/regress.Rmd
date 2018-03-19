@@ -1,0 +1,112 @@
+---
+title: "Regression cross-validation results on CAGI5 data"
+output:
+  html_document:
+    theme: united
+    highlight: tango
+    toc: true
+    toc_float:
+      collapsed: false
+    fig_width: 10
+    fig_height: 6
+    fig_caption: true
+    df_print: paged
+    # mathjax: local
+    # self_contained: false
+---
+
+```{r render, eval = FALSE, echo = FALSE}
+#
+# Run this chunk to render this document
+rmarkdown::render('regress.Rmd')
+```
+
+## Setup
+```{r loadPkgs}
+suppressPackageStartupMessages({
+  # source("https://bioconductor.org/biocLite.R")
+  # biocLite("Gviz")
+  library(Gviz)
+  data(geneModels)
+  library(ggbio)
+  data(hg19Ideogram, package = "biovizBase")
+  library(GenomicRanges)
+  library(BSgenome.Hsapiens.UCSC.hg19)
+  library(tidyverse)
+  library(reshape2)
+  library(stringr)
+  library(ggplot2)
+  library(ggthemes)
+  theme_set(theme_few())
+  scale_colour_discrete <- scale_colour_few
+  scale_fill_discrete <- scale_fill_few
+  dir.create('../plots', showWarnings = FALSE)
+})
+```
+
+
+## Test data
+```{r loadTraining}
+training_file = '../data/regress.csv'
+training_df <-
+  read_csv(training_file) %>%
+  rename("chrom" = !!names(.[2])) %>%
+  mutate(
+      chrom = str_c('chr', chrom),
+      elem = str_sub(regulatory_element, 9))
+elements <- unique(training_df$elem)
+element_dfs <- training_df %>% split(.$elem)
+nrow(training_df)
+sample_n(training_df, 50)
+```
+
+```{r testGRanges}
+element_grs <-
+  lapply(
+    element_dfs,
+    partial(
+      makeGRangesFromDataFrame,
+      keep.extra.columns = TRUE,
+      start.field = 'Pos',
+      end.field = 'Pos',
+      ignore.strand = TRUE))
+```
+
+
+## Value vs. predicted
+```{r valueDist}
+conf_scale <- scale_colour_gradient(limits = c(0, 1), low = 'blue', high = 'red')
+ggplot(training_df, aes(x = Value, y = PredValue, colour = PredConfidence)) +
+  geom_point() +
+  geom_smooth(method = 'lm') +
+  conf_scale
+```
+
+
+## Confidence vs. predicted
+```{r confDist}
+ggplot(training_df, aes(x = Confidence, y = PredConfidence, colour = Value)) +
+  geom_point() +
+  geom_smooth(method = 'lm')
+```
+
+
+## Predictions by element
+Plot the training data for each regulatory element.
+```{r vizTraining}
+plot_element <- function(.df) {
+  ggplot(.df,
+         aes(x = Pos,
+             y = PredValue,
+             size = abs(Value - PredValue),
+             colour = Value > PredValue)) +
+    geom_hline(yintercept = 0, alpha = .5) +
+    geom_point()
+    # geom_smooth(aes(y = abs(Value))) +
+}
+for (elem in elements) {
+  print(elem)
+  print(element_dfs[[elem]]$chrom[1])
+  print(plot_element(element_dfs[[elem]]))
+}
+```
