@@ -5,66 +5,28 @@ import pandas as pd
 from cagi5_utils import get_breakpoint_df, get_chunk_counts
 from models import *
 
+
 class CVOperator:
 
   def __init__(self, df, model_class, model_args=[], model_kwargs={}):
     self.model = model_class(*model_args, **model_kwargs)
     self.df = df
-    self.df['cv_prediction'] = np.nan
+    for col in self.model.predicted_columns():
+      self.df[col] = np.nan
 
   def get_preds(self, train_df, val_df):
     X_train = self.model.get_features(train_df)
-    y_train = train_df['class']
+    y_train = self.model.get_response(train_df)
 
     self.model.fit(X_train, y_train)
 
     X_val = self.model.get_features(val_df)
     y_val = val_df['class']
 
-    preds = self.model.predict(X_val)
+    preds = self.model.predict(X_val, index=val_df.index)
+    preds.index = val_df.index
     return preds
 
-def cvpreds_df_enhancer_folds(df, model_class, model_args=[], model_kwargs={}):
-  #
-  # Get/create model from args
-  model = model_class(*model_args, **model_kwargs)
-  #
-  # Add CV prediction column
-  df['cv_prediction'] = np.nan
-  #
-  # Add base element column if doesn't already exist,
-  # some funny business matching different TERT regulatory elements
-  if 'base_element' not in df.columns:
-    df['base_element'] = df.apply(lambda row: row['regulatory_element'][8:], axis=1)
-    df['base_element'] = df.apply(lambda row: 'TERT' if re.match('TERT', row['base_element'])\
-                                  else row['base_element'], axis=1)
-  #
-  # For each base element for validation
-  for val_element in df['base_element'].unique():
-    #
-    # Get the training data for the element
-    train_df = df[df['base_element']!=val_element]
-    #
-    # 
-    val_df = df[df['base_element']==val_element]
-    train_inds = train_df.index.values
-    val_inds = val_df.index.values
-
-    X_train = model.get_features(train_df)
-    y_train = train_df['class']
-    # assert not np.any(np.isnan(X_train))
-    # assert not np.any(np.isnan(y_train))
-
-    model.fit(X_train, y_train)
-
-    X_val = model.get_features(val_df)
-    y_val = val_df['class']
-
-    preds = model.predict(X_val)
-
-    df.loc[df['base_element']==val_element, 'cv_prediction'] = preds
-
-  return df
 
 # N.B. the way things are setup now, the deepsea stuff provides an
 # independent model baseline, according to which each eqtl is modelled independently
@@ -79,7 +41,7 @@ class ChunkCV(CVOperator):
     self.breakpoint_df = get_breakpoint_df(df)
     assert np.sum(self.breakpoint_df['chunk_length']) == sum(df.groupby(['regulatory_element'])['Pos'].nunique())
     self.nf = nf
-    
+
     if fold_dict is None:
       fold_dict = df_cv_split(self.breakpoint_df, nf)
     self.fold_dict = fold_dict
@@ -94,46 +56,15 @@ class ChunkCV(CVOperator):
     train_df = trainvaldf[trainvaldf['is_train']]
     val_df = trainvaldf[~trainvaldf['is_train']]
     preds = self.get_preds(train_df, val_df)
-    self.breakpoint_df.loc[~self.breakpoint_df['is_train'], 'cv_prediction'] = preds
+    for col in preds.columns.values:
+      self.breakpoint_df.loc[~self.breakpoint_df['is_train'], col] = preds[col]
     return preds
+
 
 def df_cv_split(breakpoint_df, nf):
   chunk_counts = get_chunk_counts(breakpoint_df)
   fold_dict = pick_train_chunks(chunk_counts, nf=nf)
   return fold_dict
-
-# superseded by the ChunkCV class
-# def cvpreds_df_chunk_folds(df, model_class, model_args=[], model_kwargs={}, nf=5):
-#   model = model_class(*model_args, **model_kwargs)
-#   df['cv_prediction'] = np.nan
-
-#   breakpoint_df = get_breakpoint_df(df)
-#   breakpoint_df['is_start'] = breakpoint_df['is_break'] == 'start'
-#   breakpoint_df['chunk_id'] = breakpoint_df.groupby(['regulatory_element'])['is_start'].cumsum() - 1
-
-#   assert np.sum(breakpoint_df['chunk_length']) == sum(df.groupby(['regulatory_element'])['Pos'].nunique())
-#   chunk_counts = get_chunk_counts(breakpoint_df)
-#   fold_dict = pick_train_chunks(chunk_counts, nf=nf)
-  
-#   for f in range(nf):
-#     trainvaldf = train_val_split(fold_dict, breakpoint_df, f)
-#     train_df = trainvaldf[trainvaldf['is_train']]
-#     val_df = trainvaldf[~trainvaldf['is_train']]
-
-#     X_train = model.get_features(train_df)
-#     y_train = train_df['class']
-
-#     model.fit(X_train, y_train)
-
-#     X_val = model.get_features(val_df)
-#     y_val = val_df['class']
-
-#     preds = model.predict(X_val)
-
-#     breakpoint_df.loc[~breakpoint_df['is_train'], 'cv_prediction'] = preds
-
-#   return breakpoint_df
-
 
 
 def pick_train_chunks(chunk_count_df, nf=5):
@@ -155,6 +86,7 @@ def pick_train_chunks(chunk_count_df, nf=5):
 
   return fold_dict
 
+
 def train_val_split(fold_dict, df, fold=0):
   df['chunk_id'] = df['chunk_id'].astype(int)
   df['is_train'] = True
@@ -162,4 +94,3 @@ def train_val_split(fold_dict, df, fold=0):
     val_chunks = fold_chunks[fold]
     df.loc[(df['regulatory_element']==reg_el)&(df['chunk_id'].isin(val_chunks)), 'is_train'] = False
   return df
-

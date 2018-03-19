@@ -2,9 +2,27 @@ import re
 import csv
 import pysam
 import numpy as np
+from sklearn.metrics import roc_curve
+import matplotlib.pyplot as plt
 
 from constants import LOCS
 from collections import defaultdict
+
+
+def make_roc_plot(cvdf_chunk, col='PredClass'):
+  """Makes a ROC plot of significant effect prediction."""
+  fpr, tpr, thresholds = roc_curve(cvdf_chunk['class'].abs(), cvdf_chunk[col].abs(),
+                                    pos_label=1)
+  fig = plt.figure()
+  plt.plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve')
+  plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+  plt.xlim([0.0, 1.0])
+  plt.ylim([0.0, 1.0])
+  plt.xlabel('False Positive Rate')
+  plt.ylabel('True Positive Rate')
+  plt.title('Receiver operating characteristic')
+  plt.legend(loc="lower right")
+  return fig
 
 
 def compute_row_ref(row, base_seq_dict, use_modified=True):

@@ -16,17 +16,20 @@ from cagi5_utils import get_breakpoint_df, get_chunk_counts
 
 
 class Classifier(object):
+  """
+  Classifies SNVs using logistic regression or XGBoost.
+  """
 
   def __init__(
       self,
       features,
-      classifier='lr',
+      model_name='lr',
       multiclass='ovr',
-      classifier_kwargs={},
+      model_kwargs={},
       verbose=False):
     self.features = features
-    self.classifier_kwargs = classifier_kwargs
-    self.classifier = classifier
+    self.model_kwargs = model_kwargs
+    self.model_name = model_name
     self.multiclass=multiclass
     self.verbose = verbose
 
@@ -34,20 +37,76 @@ class Classifier(object):
     # In the multiclass case, the training algorithm uses the one-vs-rest (OvR)
     # scheme if the 'multi_class' option is set to 'ovr', and uses the cross-
     # entropy loss if the 'multi_class' option is set to 'multinomial'
-    if self.classifier == 'lr':
-      self.lr = LogisticRegression(penalty='l2', C=0.01, multi_class=self.multiclass)
-    elif self.classifier == 'xgb':
-      self.lr = xgb.XGBClassifier(**self.classifier_kwargs, n_jobs=multiprocessing.cpu_count() - 1)
+    if self.model_name == 'lr':
+      self.model = LogisticRegression(penalty='l2', C=0.01, multi_class=self.multiclass)
+    elif self.model_name == 'xgb':
+      self.model = xgb.XGBClassifier(**self.model_kwargs, n_jobs=multiprocessing.cpu_count() - 1)
+    else:
+      return ValueError('Unknown model name: {}'.format(self.model_name))
     sample_weight = compute_sample_weight('balanced', y) # not sure if classes need to be labelled 0,1,2 (if so can use label encoder)
-    self.lr.fit(X, y, sample_weight=sample_weight)
+    self.model.fit(X, y, sample_weight=sample_weight)
     if self.verbose:
-      print('Train accuracy: {}'.format(self.lr.score(X, y)))
+      print('Train accuracy: {}'.format(self.model.score(X, y)))
 
-  def predict(self, X):
-    return self.lr.predict(X)
+  def predicted_columns(self):
+    return ['PredClass']
+
+  def predict(self, X, index):
+    return pd.DataFrame({'PredClass': self.model.predict(X)}, index=index)
 
   def get_features(self, df):
     return self.features.get_features(df)
+
+  def get_response(self, df):
+    return df['class']
+
+
+
+class Regression(object):
+  """
+  Regresses confidence and effect size using XGBoost.
+  """
+
+  def __init__(
+      self,
+      features,
+      model_name='xgb',
+      model_kwargs={},
+      verbose=False):
+    self.features = features
+    self.model_kwargs = model_kwargs
+    self.model_name = model_name
+    self.verbose = verbose
+
+  def fit(self, X, y):
+    if self.model_name == 'xgb':
+      self.model_value = xgb.XGBRegressor(**self.model_kwargs, n_jobs=multiprocessing.cpu_count() - 1)
+      self.model_conf = xgb.XGBRegressor(**self.model_kwargs, n_jobs=multiprocessing.cpu_count() - 1)
+    else:
+      return ValueError('Unknown model name: {}'.format(self.model_name))
+    sample_weight = compute_sample_weight('balanced', y) # not sure if classes need to be labelled 0,1,2 (if so can use label encoder)
+    self.model_value.fit(X, y['Value'], sample_weight=sample_weight)
+    self.model_conf.fit(X, y['Confidence'], sample_weight=sample_weight)
+    if self.verbose:
+      print('Train accuracy (value): {}'.format(self.model_value.score(X, y)))
+      print('Train accuracy (confidence): {}'.format(self.model_conf.score(X, y)))
+
+  def predicted_columns(self):
+    return ['PredValue', 'PredConfidence']
+
+  def predict(self, X, index):
+    return pd.DataFrame(
+      data={
+        'PredValue': self.model_value.predict(X),
+        'PredConfidence': self.model_conf.predict(X)
+      },
+      index=index)
+
+  def get_features(self, df):
+    return self.features.get_features(df)
+
+  def get_response(self, df):
+    return df[['Value', 'Confidence']]
 
 
 class Features(ABC):
