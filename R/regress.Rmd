@@ -144,7 +144,7 @@ elem_rep_corr
 ```
 Plot replicate correlation against Value R2 by element
 ```{r repCorrVsR2}
-ggplot(elem_rep_corr, aes(x = rep_corr, y = ValueR2)) + geom_point()
+ggplot(elem_rep_corr, aes(x = rep_corr, y = ValueR2, label = elem)) + geom_label()
 ```
 Summarise the predictive performace by element
 ```{r predPerf}
