@@ -37,9 +37,10 @@ suppressPackageStartupMessages({
   library(stringr)
   library(ggplot2)
   library(ggthemes)
+  library(scales)
   theme_set(theme_few())
-  scale_colour_discrete <- scale_colour_few
-  scale_fill_discrete <- scale_fill_few
+  scale_colour_discrete <- scale_colour_ptol
+  scale_fill_discrete <- scale_fill_ptol
   dir.create('../plots', showWarnings = FALSE)
 })
 ```
@@ -75,8 +76,14 @@ element_grs <-
 
 ## Value vs. predicted
 ```{r valueDist}
-conf_scale <- scale_colour_gradient(limits = c(0, 1), low = 'blue', high = 'red')
+conf_scale <-
+  scale_colour_gradient2(limits = c(0, 1),
+                         low = muted('blue'),
+                         mid = 'lightgray',
+                         midpoint = .5,
+                         high = muted('red'))
 ggplot(training_df, aes(x = Value, y = PredValue, colour = PredConfidence)) +
+  geom_abline(intercept = 0, slope = 1, linetype = 'dashed', alpha = .5) +
   geom_point() +
   geom_smooth(method = 'lm') +
   conf_scale
@@ -86,12 +93,66 @@ ggplot(training_df, aes(x = Value, y = PredValue, colour = PredConfidence)) +
 ## Confidence vs. predicted
 ```{r confDist}
 ggplot(training_df, aes(x = Confidence, y = PredConfidence, colour = Value)) +
+  geom_abline(intercept = 0, slope = 1, linetype = 'dashed', alpha = .3) +
   geom_point() +
-  geom_smooth(method = 'lm')
+  geom_smooth(method = 'lm') +
+  xlim(c(0, 1)) +
+  ylim(c(0, 1)) +
+  scale_colour_gradient2(mid = 'lightgray')
 ```
 
 
 ## Predictions by element
+Coefficient of determination (aka R2)
+```{r coeffDeterm}
+coeff_determ <- function(y, yhat) {
+  ymean = mean(y)
+  SS_total = sum((y - ymean)**2)
+  SS_explained = sum((yhat - ymean)**2)
+  SS_residual = sum((yhat - y)**2)
+  1 - (SS_residual / SS_total)
+}
+# y <- training_df$Value
+# yhat <- training_df$PredValue
+elem_R2 <-
+  training_df %>%
+  group_by(elem) %>%
+  summarise(ValueR2 = coeff_determ(Value, PredValue),
+            ConfidenceR2 = coeff_determ(Confidence, PredConfidence))
+elem_R2
+```
+Replicate correlation from challenge web page
+```{r repCorr}
+rep_corr_str <- 'elem,rep_corr
+F9,0.61
+GP1BB,0.74
+HBB,0.62
+HBG1,0.78
+HNF4A,0.75
+IRF4,0.98
+IRF6,0.90
+LDLR,0.99
+MSMB,0.75
+MYCrs6983267,0.55
+PKLR,0.79
+SORT1,0.98
+TERT-GBM,0.90
+TERT-HEK293T,0.65
+ZFAND3,0.72'
+elem_rep_corr <- read_csv(rep_corr_str) %>% left_join(elem_R2)
+elem_rep_corr
+```
+Plot replicate correlation against Value R2 by element
+```{r repCorrVsR2}
+ggplot(elem_rep_corr, aes(x = rep_corr, y = ValueR2)) + geom_point()
+```
+Summarise the predictive performace by element
+```{r predPerf}
+rotate_x_labels <- theme(axis.text.x = element_text(angle = 90, hjust = 1))
+ggplot(training_df, aes(x = elem, y=abs(PredValue - Value))) + geom_boxplot() + rotate_x_labels
+ggplot(training_df, aes(x = elem, y=abs(PredConfidence - Confidence))) + geom_boxplot() + rotate_x_labels
+```
+
 Plot the training data for each regulatory element.
 ```{r vizTraining}
 plot_element <- function(.df) {

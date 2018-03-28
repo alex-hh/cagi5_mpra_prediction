@@ -49,6 +49,7 @@ read_xlxs.py converts the excel formatted data to a pandas df.
 utils.get_cons_scores
 returns conservation scores which must be added to the df for models including conservation features to work. The version of the data frame saved in the repo currently has these included.
 
+
 ## Cross-validation
 
 The idea of the cross validation procedure is to randomly split each enhancer’s contiguous chunks into k folds. We then perform cross validation, by training a model on the data from all enhancers with the ith fold left out, for 1 <= i <= k. The predictions on the held out folds are concatenated to generate a set of predictions for the full set of training data, which is returned in a DataFrame.
@@ -64,6 +65,7 @@ N.B. to use a pre-defined set of splits (folds) , pass a dictionary mapping enha
 crossval.ChunkCV.get_cv_preds() returns the training data frame with an extra column , cv_prediction, corresponding to the predicted class of that datapoint made by the model trained on the folds other than the one including the chunk to which the datapoint belongs. This dataframe can then be used to calculate cv metrics, either by averaging fold scores, or by computing a single score globally (i.e. by passing df['class'], df['cv_prediction'] as y_true, y_pred to some sklearn scoring metric).
 
 crossval.cvpreds_df_enhancer_folds plays a similar role to ChunkCV, but the cross-validation proceeds by completing leaving out each enhancer in turn , rather than just a selection of chunks from each enhancer. This makes less sense as a CV procedure, but was what I implemented first.
+
 
 ## Models
 
@@ -89,3 +91,42 @@ To generate these features for a given training dataframe, the DSDataKerasModel 
   1. ‘ref_sequence’ and ‘alt_sequence’ columns containing the first two outputs of utils.get_check_sequences_cagi5, and representing the full sequences for ref and alt alleles must be added to the data frame before passing it to the CV handler (ChunkCV). get_check_sequences_cagi5 uses the enhancer id to get the reference sequence from the set of reference sequences saved in the first preprocessing step above, and from this sequence computes the appropriate full alternate allele sequence based on the genomic coordinates of the variants and of the start/end points of the enhancer sequence.
 
   2. DSDataKerasModel.get_features method will generate ref and alt predictions for each variant, then invokes utils.snp_feats_from_preds to convert these into a score for each variant, based on the type of comparison (diff/log odds..) specified via the feat types argument (see above).
+
+
+## Modelling Ideas
+
+  - Model each enhancer separately
+  - Smooth the conservation scores over different length scales
+  - Spatially smooth the predictions
+  - Use more features from ENCODE (cell types)
+
+
+## Advice from Elena Vigorito
+
+Thanks for the meeting. I can only give you some biological advice, which may not be useful.
+
+  1. If the size of the promoter and enhancers cloned in the vector is small
+     (dont remember) I dont think you will get the chromatin marks that you get
+     from endogenous regions, so likely that info wont be very useful, but it
+     may be worth looking at the literature.
+
+  2. I think transcription binding sites are useful and I would check which
+     ones are present and occupied  from encode chip-seq data. I would also
+     check that in the cell type that they are doing the experiments those
+     transcription factors are expressed (very common cell lines, RNA-seq
+     data).  Also, I would try to look for databases that tells altering
+     mutations for transcription factors binding sites.
+
+
+## Other Advice
+
+Lorenz suggested looking at effect sizes associated with different nucleotide
+substitutions. I have added some exploratory analysis that seems to show this
+is a real effect and have also added features for this.
+
+Paul Newcombe suggested integrating information from eQTL studies, perhaps
+the GTEx one in particular but realised that these will only cover a small
+fraction of substitutions.
+
+Maria suggested modelling the spatial effects with some latent variable process
+such as a hidden Markov model.

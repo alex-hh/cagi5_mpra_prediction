@@ -25,17 +25,20 @@ rmarkdown::render('exploration.Rmd')
 ```{r loadPkgs}
 # source("https://bioconductor.org/biocLite.R")
 # biocLite("Gviz")
-library(Gviz)
-data(geneModels)
-library(ggbio)
-data(hg19Ideogram, package = "biovizBase")
-library(GenomicRanges)
-library(BSgenome.Hsapiens.UCSC.hg19)
-library(tidyverse)
-library(reshape2)
-library(stringr)
-library(ggplot2)
-library(ggthemes)
+suppressPackageStartupMessages({
+  library(Gviz)
+  data(geneModels)
+  library(ggbio)
+  data(hg19Ideogram, package = "biovizBase")
+  library(GenomicRanges)
+  library(BSgenome.Hsapiens.UCSC.hg19)
+  library(tidyverse)
+  library(reshape2)
+  library(stringr)
+  library(ggplot2)
+  library(ggthemes)
+  library(scales)
+})
 theme_set(theme_few())
 scale_colour_discrete <- scale_colour_few
 scale_fill_discrete <- scale_fill_few
@@ -78,7 +81,7 @@ plot_element <- function(.df) {
     geom_hline(yintercept = 0, alpha = .3) +
     geom_point() +
     # geom_smooth(aes(y = abs(Value))) +
-    scale_colour_gradient(limits = c(0, 1), low = 'blue', high = 'red')
+    scale_colour_gradient(limits = c(0, 1), low = muted('blue'), high = muted('red'))
 
 }
 plot_element_gviz <- function(gr) {
@@ -181,6 +184,32 @@ ggplot(
 ggsave('../plots/spatial.pdf', width = 16, height = 12, units = 'in')
 ```
 
+
+
+## Substitution effects
+Look at whether specific substitutions are more likely to have large effect
+sizes.
+```{r substitutions}
+
+substitutions <-
+  training_df %>%
+  group_by(elem, Ref, Alt) %>%
+  summarise(mean = mean(abs(Value)), sd = sd(abs(Value))) %>%
+  mutate(subst = paste(Ref, Alt, sep = ''))
+
+for (e in unique(training_df$elem)) {
+  print(e)
+  gp <- ggplot(
+      training_df %>%
+        filter(elem == e) %>%
+        mutate(subst = paste(Ref, Alt, sep = '')),
+      aes(x = subst, y = Value)) +
+    geom_boxplot(alpha = .3, outlier.alpha = 0) +
+    geom_jitter(position=position_jitter(0.2))
+  print(gp)
+}
+
+```
 
 
 

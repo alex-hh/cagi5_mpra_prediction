@@ -7,20 +7,21 @@ from models import *
 
 
 class CVOperator:
+  """
+  Fits a model to a training data set and makes predictions on a
+  validation data set.
+  """
 
-  def __init__(self, df, model_class, model_args=[], model_kwargs={}):
+  def __init__(self, model_class, model_args=[], model_kwargs={}):
     self.model = model_class(*model_args, **model_kwargs)
-    self.df = df
-    for col in self.model.predicted_columns():
-      self.df[col] = np.nan
 
-  def get_preds(self, train_df, val_df):
-    X_train = self.model.get_features(train_df)
+  def get_preds(self, train_df, val_df, elem=None):
+    X_train = self.model.get_features(train_df, elem)
     y_train = self.model.get_response(train_df)
 
     self.model.fit(X_train, y_train)
 
-    X_val = self.model.get_features(val_df)
+    X_val = self.model.get_features(val_df, elem)
     y_val = val_df['class']
 
     preds = self.model.predict(X_val, index=val_df.index)
@@ -28,34 +29,67 @@ class CVOperator:
     return preds
 
 
+class PerElementOperator:
+  """
+  Groups data by regulatory element, applies a CVOperator
+  to each group and combines predictions on validation
+  data.
+  """
+
+  def __init__(self, child):
+    self.child = child  # The child CVOperator
+
+
+  def get_preds(self, train_df, val_df):
+    train_grpd = train_df.groupby('regulatory_element')
+    val_grpd = val_df.groupby('regulatory_element')
+    preds = []
+    for group, elem_train_df in train_grpd:
+      try:
+        elem_val_df = val_grpd.get_group(group)
+        preds.append(self.child.get_preds(elem_train_df, elem_val_df))
+      except KeyError:  # We don't have validation data for every group
+        pass
+    return pd.concat(preds)
+
+
 # N.B. the way things are setup now, the deepsea stuff provides an
 # independent model baseline, according to which each eqtl is modelled independently
 # i.e. we learn f(snp) = y, where f is a function of features of a single snp, 
 # and knows nothing (explicit) about enhancer or local context
 
-class ChunkCV(CVOperator):
+class ChunkCV:
+  """
+  Break the data into cross-validation chunks and predict on held-out
+  validation folds.
+  """
 
-  def __init__(self, df, model_class, model_args=[], model_kwargs={}, nf=5,
+  def __init__(self,
+               df,
+               operator,
+               nf=5,
                fold_dict=None):
-    super().__init__(df, model_class, model_args=model_args, model_kwargs=model_kwargs)
+    self.operator = operator
     self.breakpoint_df = get_breakpoint_df(df)
     assert np.sum(self.breakpoint_df['chunk_length']) == sum(df.groupby(['regulatory_element'])['Pos'].nunique())
     self.nf = nf
-
     if fold_dict is None:
       fold_dict = df_cv_split(self.breakpoint_df, nf)
     self.fold_dict = fold_dict
 
+
   def get_cv_preds(self):
     for f in range(self.nf):
+      print('Getting predictions for fold {}'.format(f))
       self.get_fold_preds(f)
     return self.breakpoint_df
+
 
   def get_fold_preds(self, f):
     trainvaldf = train_val_split(self.fold_dict, self.breakpoint_df, f)
     train_df = trainvaldf[trainvaldf['is_train']]
     val_df = trainvaldf[~trainvaldf['is_train']]
-    preds = self.get_preds(train_df, val_df)
+    preds = self.operator.get_preds(train_df, val_df)
     for col in preds.columns.values:
       self.breakpoint_df.loc[~self.breakpoint_df['is_train'], col] = preds[col]
     return preds

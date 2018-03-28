@@ -4,6 +4,7 @@ import multiprocessing
 import pickle
 import numpy as np
 import pandas as pd
+from pandas.api.types import CategoricalDtype
 import xgboost as xgb
 from abc import ABC, abstractmethod
 
@@ -54,8 +55,8 @@ class Classifier(object):
   def predict(self, X, index):
     return pd.DataFrame({'PredClass': self.model.predict(X)}, index=index)
 
-  def get_features(self, df):
-    return self.features.get_features(df)
+  def get_features(self, df, elem=None):
+    return self.features.get_features(df, elem)
 
   def get_response(self, df):
     return df['class']
@@ -102,8 +103,8 @@ class Regression(object):
       },
       index=index)
 
-  def get_features(self, df):
-    return self.features.get_features(df)
+  def get_features(self, df, elem=None):
+    return self.features.get_features(df, elem)
 
   def get_response(self, df):
     return df[['Value', 'Confidence']]
@@ -115,7 +116,7 @@ class Features(ABC):
   """
 
   @abstractmethod
-  def get_features(self, df):
+  def get_features(self, df, elem=None):
     pass
 
 
@@ -125,7 +126,7 @@ class DeepSeaSNP(Features):
     self.use_saved_preds = use_saved_preds
     self.feattypes = feattypes
 
-  def get_features(self, df):
+  def get_features(self, df, elem=None):
     if self.use_saved_preds:
       train_inds = df.index.values
       train_ref = np.load('data/cagi5_mpra/deepsea_ref_preds.npy')[train_inds]
@@ -167,7 +168,7 @@ class DSDataKerasModel(Features):
       alt_p = np.concatenate(alt_ps, axis=1)
     return ref_p, alt_p
 
-  def get_features(self, df):
+  def get_features(self, df, elem=None):
     suffix = ''
     if self.alllayers:
       suffix = '-all'
@@ -222,7 +223,7 @@ class SNPContext(Features):
     self.left_context_size = context_size - self.right_context_size
     self.raw_aggs = raw_aggs
 
-  def get_features(self, df):
+  def get_features(self, df, elem=None):
     breakpoint_df = get_breakpoint_df(df)
     breakpoint_df['is_start'] = breakpoint_df['is_break'] == 'start'
     breakpoint_df['chunk_id'] = breakpoint_df.groupby(['regulatory_element'])['is_start'].cumsum() - 1
@@ -262,7 +263,7 @@ class Conservation(Features):
   def __init__(self, scores=['phastCon', 'phyloP', 'GerpN', 'GerpRS']):
     self.scores = scores
 
-  def get_features(self, df):
+  def get_features(self, df, elem=None):
     feat = df[self.scores]
     return feat
 
@@ -275,13 +276,24 @@ class EnhancerOneHot(Features):
        'release_ZFAND3']):
     self.enh_names = enh_names
 
-  def get_features(self, df):
+  def get_features(self, df, elem=None):
     # https://stackoverflow.com/questions/37425961/dummy-variables-when-not-all-categories-are-present
-    enhancers = df['regulatory_element'].astype('category', categories=self.enh_names)
-    onehot = pd.get_dummies(enhancers, drop_first=True).values
+    enhancers = df['regulatory_element'].astype(CategoricalDtype(categories=self.enh_names))
+    onehot = pd.get_dummies(enhancers).values
     # print(onehot.shape)
     # other features: enhancer mean, enhancer same substitution
     return onehot
+
+
+class SubstitutionOneHot(Features):
+  def __init__(self):
+    self.base_names = ['A', 'C', 'G', 'T']
+
+  def get_features(self, df, elem=None):
+    # https://stackoverflow.com/questions/37425961/dummy-variables-when-not-all-categories-are-present
+    refs = df['Ref'].astype(CategoricalDtype(categories=self.base_names))
+    alts = df['Alt'].astype(CategoricalDtype(categories=self.base_names))
+    return np.concatenate([pd.get_dummies(refs).values, pd.get_dummies(alts).values], axis=1)
 
 
 class MPRATransfer(Features):
@@ -292,5 +304,5 @@ class MultiFeatures(Features):
   def __init__(self, features):
     self.features = features
 
-  def get_features(self, df):
-    return np.concatenate([f.get_features(df) for f in self.features], axis=1)
+  def get_features(self, df, elem=None):
+    return np.concatenate([f.get_features(df, elem) for f in self.features], axis=1)
