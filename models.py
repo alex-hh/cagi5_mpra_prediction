@@ -135,6 +135,17 @@ class DeepSeaSNP(Features):
     return snp_feats_from_preds(train_ref, train_alt, self.feattypes)
 
 
+class DNase(Features):
+
+  def __init__(self, idxs = None)
+    self.feats = np.load('data/dnase-features.npy')[:, idxs]
+    if idxs is not None:
+      self.feats = self.feats[:, idxs]
+
+  def get_features(self, df, elem=None):
+    return self.feats[df.index.values]
+
+
 class DSDataKerasModel(Features):
 
   def __init__(self, experiment_name, feattypes=['diff'], alllayers=False, layers=[]):

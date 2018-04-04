@@ -1,6 +1,9 @@
 data/remote_data
 data/remote_results
 data/remote_workspace
+plots
+R/tmp
+R/*.html
 __pycache__
 .ipynb_checkpoints
 venv3/

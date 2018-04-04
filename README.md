@@ -105,8 +105,8 @@ To generate these features for a given training dataframe, the DSDataKerasModel 
 
 Thanks for the meeting. I can only give you some biological advice, which may not be useful.
 
-  1. If the size of the promoter and enhancers cloned in the vector is small
-     (dont remember) I dont think you will get the chromatin marks that you get
+  1. If the size of the promoter and enhancers cloned in the vector is small (dont
+     remember) I dont think you will get the chromatin marks that you get
      from endogenous regions, so likely that info wont be very useful, but it
      may be worth looking at the literature.
 
@@ -130,3 +130,21 @@ fraction of substitutions.
 
 Maria suggested modelling the spatial effects with some latent variable process
 such as a hidden Markov model.
+
+
+# Related publications
+
+## Tewhey et al. 2016
+
+Found significant association between active sequences (one of two alleles has altered (raised)
+expression) and DNase hypersensitive regions, also with chromatin marks and with TF-binding
+profiles but this was all cell type specific. emVars refers to sequences with allelic skew. This
+showed modest but reproducible differences.
+
+
+## Kreimer et al. 2017
+
+Comparative review of prediction gene expression in MPRA. Participants used many types of features.
+Used assays of epigenetic marks in cell types of interest. Also used predictions of these marks
+from deep learning models. The mark predictions were able to take account of the reference and the
+alternate allele. The assays were only based on the actual genomic sequence in the cell line studied.

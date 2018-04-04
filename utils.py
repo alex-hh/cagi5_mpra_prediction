@@ -2,27 +2,46 @@ import re
 import csv
 import pysam
 import numpy as np
-from sklearn.metrics import roc_curve
+from sklearn.metrics import roc_curve, auc, precision_recall_curve
 import matplotlib.pyplot as plt
 
 from constants import LOCS
 from collections import defaultdict
 
 
-def make_roc_plot(cvdf_chunk, col='PredClass'):
+def make_plots(cvdf_chunk, col='PredValue'):
+  fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(18, 6))
+  return (make_roc_plot(ax1, cvdf_chunk, col), make_pr_plot(ax2, cvdf_chunk, col))
+
+
+def make_pr_plot(ax, cvdf_chunk, col='PredClass'):
+  precision, recall, thresholds = \
+      precision_recall_curve(cvdf_chunk['class'].abs(), cvdf_chunk[col].abs())
+  auprc = auc(recall, precision)
+  ax.step(recall, precision, color='b', alpha=0.2, where='post')
+  ax.fill_between(recall, precision, step='post', alpha=0.2, color='b')
+  ax.set_xlabel('Recall')
+  ax.set_ylabel('Precision')
+  ax.set_xlim([0.0, 1.0])
+  ax.set_ylim([0.0, 1.0])
+  ax.set_title('AUPRC: {:.2f}'.format(auprc))
+  return precision, recall, thresholds, auprc
+
+
+def make_roc_plot(ax, cvdf_chunk, col='PredClass'):
   """Makes a ROC plot of significant effect prediction."""
   fpr, tpr, thresholds = roc_curve(cvdf_chunk['class'].abs(), cvdf_chunk[col].abs(),
                                     pos_label=1)
-  fig = plt.figure()
-  plt.plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve')
-  plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
-  plt.xlim([0.0, 1.0])
-  plt.ylim([0.0, 1.0])
-  plt.xlabel('False Positive Rate')
-  plt.ylabel('True Positive Rate')
-  plt.title('Receiver operating characteristic')
-  plt.legend(loc="lower right")
-  return fig
+  auroc = auc(fpr, tpr)
+  ax.plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve')
+  ax.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+  ax.set_xlim([0.0, 1.0])
+  ax.set_ylim([0.0, 1.0])
+  ax.set_xlabel('False Positive Rate')
+  ax.set_ylabel('True Positive Rate')
+  ax.set_title('AUROC: {:.2f}'.format(auroc))
+  ax.legend(loc="lower right")
+  return fpr, tpr, thresholds, auroc
 
 
 def compute_row_ref(row, base_seq_dict, use_modified=True):

@@ -1,0 +1,41 @@
+#!/usr/bin/env python
+
+import numpy as np
+import pandas as pd
+import os
+import functools
+
+#
+# Config
+#
+data_path = functools.partial(os.path.join, 'data')
+
+#
+# Read training data
+#
+training = pd.read_csv(data_path('cagi5_df.csv')).rename(index=str, columns={"#Chrom": "chrom"})
+_, training['elem'] = training['regulatory_element'].str.split('_', 1).str
+training.columns
+
+
+def reg_elem(region, cell_line):
+  if 'TERT' == region:
+    return 'TERT-' + cell_line
+  else:
+    return region
+
+
+#
+# Read DNase data
+#
+dnase_feats = pd.read_csv(data_path('dnase-features.csv'))
+dnase_feats['elem'] = [reg_elem(region, cell_line) for region, cell_line in zip(dnase_feats['region'], dnase_feats['cell_line'])]
+
+
+#
+# Merge DNase features with training regions
+#
+merged = training.merge(dnase_feats, how='left', on=('elem'))
+feat_cols = list(filter(lambda col: col.startswith('DNase'), merged.columns.values))
+feats = merged.loc[:, feat_cols].as_matrix()
+np.save(data_path('dnase-features.npy'), feats)

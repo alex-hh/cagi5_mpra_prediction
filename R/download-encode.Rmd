@@ -1,0 +1,237 @@
+---
+title: "Download ENCODE data"
+output:
+  html_document:
+    theme: united
+    highlight: tango
+    toc: true
+    toc_float:
+      collapsed: false
+    fig_width: 10
+    fig_height: 6
+    fig_caption: true
+    df_print: paged
+    # mathjax: local
+    # self_contained: false
+---
+
+```{r render, eval = FALSE, echo = FALSE}
+#
+# Run this chunk to render this document
+rmarkdown::render('download-encode.Rmd')
+```
+
+## Setup
+Load packages
+```{r loadPkgs}
+suppressPackageStartupMessages({
+  library(tidyverse)
+  library(stringr)
+  library(GenomicRanges)
+  library(BSgenome)
+  library(rtracklayer)
+  library(AnnotationHub)
+  library(ggplot2)
+  library(ggthemes)
+  library(scales)
+})
+theme_set(theme_few())
+scale_colour_discrete <- scale_colour_few
+scale_fill_discrete <- scale_fill_few
+dir.create('../plots', showWarnings = FALSE)
+```
+
+
+
+Script parameters and config
+```{r config}
+seed <- 37
+set.seed(seed)
+data_dir <- file.path('..', 'data')
+session <- browserSession("UCSC")
+genomeid <- 'hg19'
+genome(session) <- genomeid
+genomeseqinfo <- Seqinfo(genome = genomeid)
+```
+
+
+Parse regions data
+```{r metaData}
+regions_str <- 'region	coords	phenotype	vector	cell_line	Transf_time	fold_change	construct_size
+F9	chrX:138612624-138612923	Hemophilia B	pGL4.11b	HepG2	24	2.6	300
+GP1BB	chr22:19710790-19711173	Bernard-Soulier Syndrome	pGL4.11b	HEL 92.1.7	24	22.1	384
+HBB 	chr11:5248252-5248438	Thalassemia	pGL4.11b	HEL 92.1.7	24	14.3	187
+HBG 	chr11:5271035-5271308	Hereditary persistence of fetal hemoglobin	pGL4.11b	HEL 92.1.7	24	118.1	274
+HNF4A (P2)	chr20:42984160-42984444	Maturity-onset diabetes of the young (MODY)	pGL4.11b	HEK293T	24	2.8	285
+LDLR	chr19:11199907-11200224 	Familial hypercholesterolemia	pGL4.11b	HepG2	24	110.7	318
+MSMB	chr10:51548988-51549578	Prostate cancer	pGL4.11b	HEK293T	24	8.4	591
+PKLR	chr1:155271187-155271655	Pyruvate kinase deficiency	pGL4.11b	K562	48	29.4	469
+TERT	chr5:1295105-1295362	Various types of cancer	pGL4.11b	HEK293T, GBM	24	231.8	258
+IRF4	chr6:396143-396593 	Human pigmentation	pGL4.23	SK-MEL-28	24	44.5	451
+IRF6	chr1:209989135-209989734 	Cleft lip	pGL4.23	HaCaT	24	17.0	600
+MYC	chr8:128413074-128413673 	Various types of cancer (rs6983267)	pGL4.23	HEK293T	32, 20nM LiCl added after 24hr	0.8	600
+SORT1	chr1:109817274-109817873	Plasma low-density lipoprotein cholesterol & myocardial infraction	pGL4.23	HepG2	24	235.3	600
+ZFAND3 	chr6:37775276-37775853 	Type 2 diabetes	pGL4.23	MIN6	24	14.3	578'
+regions <- readr::read_tsv(regions_str)
+readr::write_tsv(regions, file.path(data_dir, 'regions.tsv'))
+get_grange <- function(coords) GRanges(coords, seqinfo = genomeseqinfo)
+grange_for_region <- function(r) get_grange(filter(regions, region == r)$coords)
+regions$elem
+```
+
+
+Separate the cell lines (the TERT region has two).
+```{r sepCellLines}
+make_elem <- Vectorize(function(region, cell_line) {
+  if ('TERT' == region) {
+    str_c('TERT-', cell_line)
+  } else {
+    region
+  }
+})
+elements <-
+  regions %>%
+  rowwise() %>%
+  do(data.frame(region = .$region,
+                cell_line = unlist(str_split(.$cell_line, ', ')),
+                stringsAsFactors = FALSE)) %>%
+  ungroup() %>%
+  mutate(elem = make_elem(region, cell_line))
+readr::write_tsv(elements, file.path(data_dir, 'elements.tsv'))
+elements
+```
+
+
+Guess at CAGI challenge cell line mappings to ENCODE cell lines
+```{r encodeCellLines}
+cell_lines_str <- 'cell_line,encode_cell_line
+HepG2,HepG2
+HEL 92.1.7,GM12878
+HEK293T,HEK293T
+K562,K562
+GBM,Gliobla
+SK-MEL-28,Colo829
+HaCaT,NHEK
+MIN6,PanIslets'
+cell_lines <-readr::read_csv(cell_lines_str)
+readr::write_tsv(cell_lines, file.path(data_dir, 'encode_cell_lines.tsv'))
+cell_lines
+```
+
+
+Use AnnotationHub to discover tracks
+```{r annotationHub, eval = FALSE}
+ah = AnnotationHub()
+unique_cell_lines <- unique(unlist(str_split(regions$cell_line, ', ')))  # Get every cell line from the meta data $
+for (cell_line in unique_cell_lines) {
+  print(cell_line)
+  clq <- query(ah, cell_line, 'dnase', 'overlap')
+  print(clq)
+}
+```
+
+
+Get Duke open chromatin signal table names
+```{r dukeOpenChrom}
+# Example URL:
+# http://genome.ucsc.edu/cgi-bin/hgTables?hgsid=662094631_LCwGKz84uo7rDaGzAQrMHZHoNmx2&clade=mammal&org=Human&db=hg19&hgta_group=regulation&hgta_track=wgEncodeOpenChromDnase&hgta_table=wgEncodeOpenChromDnaseK562BaseOverlapSignalV2&hgta_regionType=genome&position=chr19%3A11199907-11200224&hgta_outputType=wigData&hgta_outFileName=
+# track = wgEncodeOpenChromDnase
+# table = wgEncodeOpenChromDnaseK562BaseOverlapSignalV2
+openChromDnase <- ucscTableQuery(session, track = 'wgEncodeOpenChromDnase')
+openChromTables <- tableNames(openChromDnase)
+openChromTables[grep('K562BaseOverlapSignal', openChromTables, ignore.case = TRUE)]
+dnase_margin <- 20
+get_duke_overlap_track_name <- Vectorize(function(ecl) {
+  message(ecl)
+  tableRegex <- str_c(ecl, 'BaseOverlapSignal')
+  tables <- openChromTables[grep(tableRegex, openChromTables, ignore.case = TRUE)]
+  print(tables)
+  stopifnot(1 == length(tables))
+  tables
+})
+get_dnase_track <- Vectorize(function(table_name, region) {
+  message('Getting DNAse track: ', table_name)
+  gr <- grange_for_region(region)
+  print(gr)
+  range(openChromDnase) <- gr + dnase_margin
+  tableName(openChromDnase) <- table_name
+  track(openChromDnase)  # a GRanges object
+})
+region_tracks <-
+  elements %>%
+  left_join(cell_lines) %>%
+  mutate(dnase_table_name = get_duke_overlap_track_name(encode_cell_line)) %>%
+  mutate(tr = get_dnase_track(dnase_table_name, region))
+readr::write_tsv(select(region_tracks, -tr), file.path(data_dir, 'dnase-tables.tsv'))
+region_tracks$tr[[1]]
+```
+
+
+Extract data from track GRange
+```{r extractGRange}
+as_score_df <- function(region, cell_line, tr) {
+  # Remove NAs
+  tr <- tr[! is.na(score(tr)),]
+  # Need at least one range
+  stopifnot(0 <= length(tr))
+  # Logic below only works if all ranges are width 1 as they seem to be from UCSC
+  stopifnot(all(width(tr)) == 1)
+  # Get start and end
+  start_pos <- min(start(tr))
+  end_pos <- max(end(tr))
+  # Create data frame to return
+  .df <- data.frame(region = region, cell_line = cell_line, Pos = start_pos:end_pos, score = 0, stringsAsFactors = FALSE)
+  # Put values and chromosomes in data frame
+  idxs <- start(tr) - start_pos + 1
+  .df$score[idxs] <- score(tr)
+  .df$chrom[idxs] <- as.character(chrom(tr))
+  .df
+}
+dnase_df <-
+  region_tracks %>%
+  rowwise() %>%
+  do(as_score_df(.$region, .$cell_line, .$tr)) %>%
+  ungroup()
+readr::write_csv(dnase_df, file.path(data_dir, 'dnase.csv'))
+sample_n(dnase_df, 6)
+```
+
+
+Format data into features for prediction
+```{r formatDNase}
+format_elem <- function(.df) {
+  # message('Extracting features: ', .df$region, ' : ', .df$cell_line)
+  .df <- arrange(.df, Pos)
+  .margin <- 20
+  nfeats <- 2 * .margin + 1
+  npos <- nrow(.df) - 2 * .margin
+  result <- matrix(0, nrow = npos, ncol = nfeats)
+  idxs <- 1:nfeats
+  for (p in 1:npos) {
+    result[p,] <- .df$score[p:(p+nfeats-1)]
+  }
+  colnames(result) <- str_c('DNase', 1:nfeats)
+  bind_cols(select(.df, region, cell_line, chrom, Pos)[(.margin+1):(.margin+npos),], as.data.frame(result))
+}
+dnase_feats <-
+  dnase_df %>%
+  ungroup() %>%
+  group_by(region, cell_line) %>%
+  do(format_elem(.)) %>%
+  ungroup()
+readr::write_csv(dnase_feats, file.path(data_dir, 'dnase-features.csv'))
+dnase_feats %>% sample_n(5)
+```
+
+
+Plot DNase data
+```{r plotDNase}
+
+ggplot(
+    dnase_df %>% left_join(regions),
+    aes(x = Pos, y = score)) +
+  geom_point(alpha = .3) +
+  facet_wrap(~ region + cell_line, scales = "free")
+
+```
+
