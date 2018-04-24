@@ -95,10 +95,21 @@ To generate these features for a given training dataframe, the DSDataKerasModel 
 
 ## Modelling Ideas
 
-  - Model each enhancer separately
+  * Fit a model to all enhancers and use its predictions as inputs to enhancer specific models (ie stacking)
+  * Add a feature encoding reference and alternate allele
   - Smooth the conservation scores over different length scales
   - Spatially smooth the predictions
-  - Use more features from ENCODE (cell types)
+  * Use an ensemble of methods to quantify certainty in predictions
+
+Already implemented:
+
+  - Model each enhancer separately - done
+  - Use more features from ENCODE (cell types) - DNase at least
+
+## To do
+
+  - Remove unintentional positions that are included in the dataset (see
+    note at top of challenge web page).
 
 
 ## Advice from Elena Vigorito

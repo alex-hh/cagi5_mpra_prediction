@@ -1,0 +1,23 @@
+#!/usr/bin/env python
+
+"""
+A sandbox for testing code and playing around.
+"""
+
+import numpy as np
+import pandas as pd
+import models
+
+
+# Data
+df = pd.read_csv('data/cagi5_df.csv')
+
+
+dnase = np.load('data/dnase-features.npy')
+dnase.shape
+dnase[[1, 2, 3, 4]].shape
+
+dnase_features = models.DNase()
+dnase_features.get_features(df.sample(6)).shape
+dnase_features.feats.shape
+

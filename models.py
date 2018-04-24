@@ -1,13 +1,11 @@
 import os
-
 import multiprocessing
 import pickle
+from abc import ABC, abstractmethod
 import numpy as np
 import pandas as pd
 from pandas.api.types import CategoricalDtype
 import xgboost as xgb
-from abc import ABC, abstractmethod
-
 from sklearn.linear_model import LogisticRegression
 from sklearn.utils.class_weight import compute_sample_weight
 
@@ -136,9 +134,12 @@ class DeepSeaSNP(Features):
 
 
 class DNase(Features):
+  """
+  Sequence features derived from downloaded DNase tracks.
+  """
 
-  def __init__(self, idxs = None)
-    self.feats = np.load('data/dnase-features.npy')[:, idxs]
+  def __init__(self, idxs = None):
+    self.feats = np.load('data/dnase-features.npy')
     if idxs is not None:
       self.feats = self.feats[:, idxs]
 

@@ -3,6 +3,7 @@ scipy
 pandas
 sklearn
 xgboost
+lightgbm
 matplotlib
 pysam
 neovim
