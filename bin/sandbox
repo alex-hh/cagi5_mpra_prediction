@@ -5,19 +5,37 @@ A sandbox for testing code and playing around.
 """
 
 import numpy as np
+import scipy
 import pandas as pd
 import models
 
 
+#
+# Configuration
+np.random.seed(37)
+
+
+#
 # Data
 df = pd.read_csv('data/cagi5_df.csv')
+df.shape
+df
 
 
-dnase = np.load('data/dnase-features.npy')
-dnase.shape
-dnase[[1, 2, 3, 4]].shape
-
+#
+# DNase
 dnase_features = models.DNase()
-dnase_features.get_features(df.sample(6)).shape
 dnase_features.feats.shape
-
+df_sample = df.sample(6)
+df_sample
+dnase = dnase_features.get_features(df_sample)
+dnase.shape
+dnase
+scipy.stats.describe(dnase_features.feats, axis=None)
+isnan = np.isnan(dnase_features.feats)
+nans = np.nonzero(isnan)
+nans
+nans[1].shape
+len(np.unique(nans[0]))
+df.iloc[nans[0]]['regulatory_element'].unique()
+assert not np.any(isnan)

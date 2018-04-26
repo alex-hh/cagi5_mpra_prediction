@@ -30,12 +30,15 @@ def reg_elem(region, cell_line):
 #
 dnase_feats = pd.read_csv(data_path('dnase-features.csv'))
 dnase_feats['elem'] = [reg_elem(region, cell_line) for region, cell_line in zip(dnase_feats['region'], dnase_feats['cell_line'])]
+dnase_feats.shape
 
 
 #
 # Merge DNase features with training regions
 #
-merged = training.merge(dnase_feats, how='left', on=('elem'))
+merged = training.merge(dnase_feats, how='left', on=('elem', 'Pos'))
+assert merged.shape[0] == training.shape[0]  # Incorrect merge bug lead to many more rows
 feat_cols = list(filter(lambda col: col.startswith('DNase'), merged.columns.values))
 feats = merged.loc[:, feat_cols].as_matrix()
+assert not np.any(np.isnan(feats))
 np.save(data_path('dnase-features.npy'), feats)
