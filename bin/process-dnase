@@ -16,6 +16,7 @@ data_path = functools.partial(os.path.join, 'data')
 training = pd.read_csv(data_path('cagi5_df.csv')).rename(index=str, columns={"#Chrom": "chrom"})
 _, training['elem'] = training['regulatory_element'].str.split('_', 1).str
 training.columns
+training.shape
 
 
 def reg_elem(region, cell_line):

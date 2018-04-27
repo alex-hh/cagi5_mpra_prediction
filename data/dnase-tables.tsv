@@ -2,8 +2,8 @@ region	cell_line	elem	encode_cell_line	dnase_table_name
 F9	HepG2	F9	HepG2	wgEncodeOpenChromDnaseHepg2BaseOverlapSignal
 GP1BB	HEL 92.1.7	GP1BB	GM12878	wgEncodeOpenChromDnaseGm12878BaseOverlapSignal
 HBB	HEL 92.1.7	HBB	GM12878	wgEncodeOpenChromDnaseGm12878BaseOverlapSignal
-HBG	HEL 92.1.7	HBG	GM12878	wgEncodeOpenChromDnaseGm12878BaseOverlapSignal
-HNF4A (P2)	HEK293T	HNF4A (P2)	HEK293T	wgEncodeOpenChromDnaseHek293tBaseOverlapSignal
+HBG1	HEL 92.1.7	HBG1	GM12878	wgEncodeOpenChromDnaseGm12878BaseOverlapSignal
+HNF4A	HEK293T	HNF4A	HEK293T	wgEncodeOpenChromDnaseHek293tBaseOverlapSignal
 LDLR	HepG2	LDLR	HepG2	wgEncodeOpenChromDnaseHepg2BaseOverlapSignal
 MSMB	HEK293T	MSMB	HEK293T	wgEncodeOpenChromDnaseHek293tBaseOverlapSignal
 PKLR	K562	PKLR	K562	wgEncodeOpenChromDnaseK562BaseOverlapSignalV2
@@ -11,6 +11,6 @@ TERT	HEK293T	TERT-HEK293T	HEK293T	wgEncodeOpenChromDnaseHek293tBaseOverlapSignal
 TERT	GBM	TERT-GBM	Gliobla	wgEncodeOpenChromDnaseGlioblaBaseOverlapSignal
 IRF4	SK-MEL-28	IRF4	Colo829	wgEncodeOpenChromDnaseColo829BaseOverlapSignal
 IRF6	HaCaT	IRF6	NHEK	wgEncodeOpenChromDnaseNhekBaseOverlapSignal
-MYC	HEK293T	MYC	HEK293T	wgEncodeOpenChromDnaseHek293tBaseOverlapSignal
+MYCrs6983267	HEK293T	MYCrs6983267	HEK293T	wgEncodeOpenChromDnaseHek293tBaseOverlapSignal
 SORT1	HepG2	SORT1	HepG2	wgEncodeOpenChromDnaseHepg2BaseOverlapSignal
 ZFAND3	MIN6	ZFAND3	PanIslets	wgEncodeOpenChromDnasePanisletsBaseOverlapSignal
