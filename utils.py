@@ -4,14 +4,21 @@ import pysam
 import numpy as np
 from sklearn.metrics import roc_curve, auc, precision_recall_curve
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 
 from constants import LOCS
 from collections import defaultdict
 
 
 def make_plots(cvdf_chunk, col='PredValue'):
-  fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(18, 6))
-  return (make_roc_plot(ax1, cvdf_chunk, col), make_pr_plot(ax2, cvdf_chunk, col))
+  fig, ((ax_roc, ax_prc), (ax_value, ax_conf)) = plt.subplots(nrows=2, ncols=2, figsize=(18, 12))
+  cv_grpd = cvdf_chunk.groupby('regulatory_element')
+  colors = cm.Set1(np.linspace(0, 1, len(cv_grpd)))
+  return (
+      make_roc_plot(ax_roc, cvdf_chunk, col),
+      make_pr_plot(ax_prc, cvdf_chunk, col),
+      make_value_plot(ax_value, cv_grpd, colors),
+      make_conf_plot(ax_conf, cv_grpd, colors))
 
 
 def make_pr_plot(ax, cvdf_chunk, col='PredClass'):
@@ -42,6 +49,26 @@ def make_roc_plot(ax, cvdf_chunk, col='PredClass'):
   ax.set_title('AUROC: {:.2f}'.format(auroc))
   ax.legend(loc="lower right")
   return fpr, tpr, thresholds, auroc
+
+
+def make_value_plot(ax, cv_grpd, colors):
+  """Makes a scatter plot of predicted vs. observed values."""
+  for i, (name, grp) in enumerate(cv_grpd):
+      ax.scatter(grp['Value'], grp['PredValue'], label=name, color=colors[i], alpha=.2)
+  # ax.legend()
+  ax.set_xlabel('value')
+  ax.set_ylabel('predicted')
+  return ax
+
+
+def make_conf_plot(ax, cv_grpd, colors):
+  """Makes a scatter plot of predicted vs. observed values."""
+  for i, (name, grp) in enumerate(cv_grpd):
+      ax.scatter(grp['Confidence'], grp['PredConfidence'], label=name, color=colors[i], alpha=.2)
+  # ax.legend()
+  ax.set_xlabel('confidence')
+  ax.set_ylabel('predicted')
+  return ax
 
 
 def compute_row_ref(row, base_seq_dict, use_modified=True):
