@@ -7,6 +7,7 @@ import pandas as pd
 from pandas.api.types import CategoricalDtype
 import xgboost as xgb
 import lightgbm as lgbm
+from sklearn.linear_model import ElasticNetCV
 from sklearn.linear_model import LogisticRegression
 from sklearn.utils.class_weight import compute_sample_weight
 
@@ -85,11 +86,13 @@ class Regression(object):
     elif self.model_name == 'lgbm':
       self.model_value = lgbm.LGBMRegressor(**self.model_kwargs, n_jobs=multiprocessing.cpu_count() - 1)
       self.model_conf = lgbm.LGBMRegressor(**self.model_kwargs, n_jobs=multiprocessing.cpu_count() - 1)
+    elif self.model_name == 'elasticnet':
+      self.model_value = ElasticNetCV(**self.model_kwargs, n_jobs=multiprocessing.cpu_count() - 1)
+      self.model_conf = ElasticNetCV(**self.model_kwargs, n_jobs=multiprocessing.cpu_count() - 1)
     else:
       return ValueError('Unknown model name: {}'.format(self.model_name))
-    sample_weight = compute_sample_weight('balanced', y) # not sure if classes need to be labelled 0,1,2 (if so can use label encoder)
-    self.model_value.fit(X, y['Value'], sample_weight=sample_weight)
-    self.model_conf.fit(X, y['Confidence'], sample_weight=sample_weight)
+    self.model_value.fit(X, y['Value'])
+    self.model_conf.fit(X, y['Confidence'])
     if self.verbose:
       print('Train accuracy (value): {}'.format(self.model_value.score(X, y)))
       print('Train accuracy (confidence): {}'.format(self.model_conf.score(X, y)))
