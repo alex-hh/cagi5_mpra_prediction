@@ -14,41 +14,57 @@ def make_plots(cvdf_chunk, col='PredValue'):
   fig, ((ax_roc, ax_prc), (ax_value, ax_conf)) = plt.subplots(nrows=2, ncols=2, figsize=(18, 12))
   cv_grpd = cvdf_chunk.groupby('regulatory_element')
   colors = cm.Set1(np.linspace(0, 1, len(cv_grpd)))
+  fpr, tpr, thresholds, auroc = make_roc_curve(ax_roc, cvdf_chunk, fill=True, label='overall', color='k')
+  precision, recall, thresholds, auprc = pr_curve(ax_prc, cvdf_chunk, fill=True)
+  for i, (name, grp) in enumerate(cv_grpd):
+    pr_curve(ax_prc, grp, color=colors[i], fill=False)
+    make_roc_curve(ax_roc, grp, label=name, color=colors[i], alpha=.5)
+  auroc_axes(ax_roc, auroc)
+  auprc_axes(ax_prc, auprc)
   return (
-      make_roc_plot(ax_roc, cvdf_chunk, col),
-      make_pr_plot(ax_prc, cvdf_chunk, col),
+      (fpr, tpr, thresholds, auroc),
+      (precision, recall, thresholds, auprc),
       make_value_plot(ax_value, cv_grpd, colors),
       make_conf_plot(ax_conf, cv_grpd, colors))
 
 
-def make_pr_plot(ax, cvdf_chunk, col='PredClass'):
+def make_roc_curve(ax, cvdf_chunk, color, col='PredValue', fill=False, **kwargs):
+  """Makes a ROC plot of significant effect prediction."""
+  fpr, tpr, thresholds = roc_curve(cvdf_chunk['class'].abs(), cvdf_chunk[col].abs(),
+                                   pos_label=1)
+  auroc = auc(fpr, tpr)
+  ax.plot(fpr, tpr, color=color, **kwargs)
+  if fill:
+    ax.fill_between(fpr, tpr, step='post', alpha=0.2, color=color)
+  return fpr, tpr, thresholds, auroc
+
+
+def pr_curve(ax, cvdf_chunk, color='k', col='PredValue', fill=False):
   precision, recall, thresholds = \
       precision_recall_curve(cvdf_chunk['class'].abs(), cvdf_chunk[col].abs())
   auprc = auc(recall, precision)
-  ax.step(recall, precision, color='b', alpha=0.2, where='post')
-  ax.fill_between(recall, precision, step='post', alpha=0.2, color='b')
+  ax.step(recall, precision, color=color, alpha=0.2, where='post')
+  if fill:
+    ax.fill_between(recall, precision, step='post', alpha=0.2, color=color)
+  return precision, recall, thresholds, auprc
+
+
+def auprc_axes(ax, auprc):
   ax.set_xlabel('Recall')
   ax.set_ylabel('Precision')
   ax.set_xlim([0.0, 1.0])
   ax.set_ylim([0.0, 1.0])
   ax.set_title('AUPRC: {:.2f}'.format(auprc))
-  return precision, recall, thresholds, auprc
 
 
-def make_roc_plot(ax, cvdf_chunk, col='PredClass'):
-  """Makes a ROC plot of significant effect prediction."""
-  fpr, tpr, thresholds = roc_curve(cvdf_chunk['class'].abs(), cvdf_chunk[col].abs(),
-                                    pos_label=1)
-  auroc = auc(fpr, tpr)
-  ax.plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve')
-  ax.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+def auroc_axes(ax, auroc):
+  ax.plot([0, 1], [0, 1], color='k', lw=2, linestyle='--', alpha=.7)
   ax.set_xlim([0.0, 1.0])
   ax.set_ylim([0.0, 1.0])
   ax.set_xlabel('False Positive Rate')
   ax.set_ylabel('True Positive Rate')
   ax.set_title('AUROC: {:.2f}'.format(auroc))
   ax.legend(loc="lower right")
-  return fpr, tpr, thresholds, auroc
 
 
 def make_value_plot(ax, cv_grpd, colors):
