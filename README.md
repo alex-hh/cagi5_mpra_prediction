@@ -103,6 +103,7 @@ To generate these features for a given training dataframe, the DSDataKerasModel 
 
 Already implemented:
 
+  - Use a DNase feature
   - Model each enhancer separately - done
   - Use more features from ENCODE (cell types) - DNase at least
 
@@ -110,6 +111,9 @@ Already implemented:
 
   - Remove unintentional positions that are included in the dataset (see
     note at top of challenge web page).
+  - Use LightGBM instead of xgboost.
+  - Hyperparameter search.
+  - Think about how to quantify uncertainty.
 
 
 ## Advice from Elena Vigorito

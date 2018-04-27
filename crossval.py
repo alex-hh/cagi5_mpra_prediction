@@ -15,18 +15,24 @@ class CVOperator:
   def __init__(self, model_class, model_args=[], model_kwargs={}):
     self.model = model_class(*model_args, **model_kwargs)
 
+
   def get_preds(self, train_df, val_df, elem=None):
+    """
+    The model cannot supply stacked features so we add an additional
+    argument here to supply them.
+    """
     X_train = self.model.get_features(train_df, elem)
     y_train = self.model.get_response(train_df)
 
     self.model.fit(X_train, y_train)
 
-    X_val = self.model.get_features(val_df, elem)
-    y_val = val_df['class']
+    return self.make_predictions(val_df, elem)
 
-    preds = self.model.predict(X_val, index=val_df.index)
-    preds.index = val_df.index
-    return preds
+
+  def make_predictions(self, df, elem=None):
+    X = self.model.get_features(df, elem)
+    return self.model.predict(X, index=df.index)
+
 
 
 class PerElementOperator:

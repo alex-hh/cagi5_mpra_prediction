@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from pandas.api.types import CategoricalDtype
 import xgboost as xgb
+import lightgbm as lgbm
 from sklearn.linear_model import LogisticRegression
 from sklearn.utils.class_weight import compute_sample_weight
 
@@ -81,6 +82,9 @@ class Regression(object):
     if self.model_name == 'xgb':
       self.model_value = xgb.XGBRegressor(**self.model_kwargs, n_jobs=multiprocessing.cpu_count() - 1)
       self.model_conf = xgb.XGBRegressor(**self.model_kwargs, n_jobs=multiprocessing.cpu_count() - 1)
+    elif self.model_name == 'lgbm':
+      self.model_value = lgbm.LGBMRegressor(**self.model_kwargs, n_jobs=multiprocessing.cpu_count() - 1)
+      self.model_conf = lgbm.LGBMRegressor(**self.model_kwargs, n_jobs=multiprocessing.cpu_count() - 1)
     else:
       return ValueError('Unknown model name: {}'.format(self.model_name))
     sample_weight = compute_sample_weight('balanced', y) # not sure if classes need to be labelled 0,1,2 (if so can use label encoder)
@@ -131,6 +135,18 @@ class DeepSeaSNP(Features):
       train_alt = np.load('data/cagi5_mpra/deepsea_alt_preds.npy')[train_inds]
 
     return snp_feats_from_preds(train_ref, train_alt, self.feattypes)
+
+
+class Stacked(Features):
+  """
+  Stacked features derived from a model cross-validated across all training data
+  """
+
+  def __init__(self, tag='deep-e1h-dnase-cons'):
+    self.feats = np.load('data/stacked-{}.npy'.format(tag))
+
+  def get_features(self, df, elem=None):
+    return self.feats[df.index.values]
 
 
 class DNase(Features):
