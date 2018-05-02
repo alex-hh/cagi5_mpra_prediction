@@ -224,16 +224,16 @@ substitutions <-
   group_by(elem, Ref, Alt) %>%
   summarise(mean = mean(abs(Value)), sd = sd(abs(Value))) %>%
   mutate(subst = paste(Ref, Alt, sep = ''))
-
 for (e in unique(training_df$elem)) {
   print(e)
   gp <- ggplot(
       training_df %>%
         filter(elem == e) %>%
         mutate(subst = paste(Ref, Alt, sep = '')),
-      aes(x = subst, y = Value)) +
-    geom_boxplot(alpha = .3, outlier.alpha = 0) +
-    geom_jitter(position=position_jitter(0.2))
+      aes(x = subst, y = Value, fill=Alt)) +
+    geom_boxplot(alpha = .5, outlier.alpha = 0) +
+    geom_jitter(position=position_jitter(0.2)) +
+    facet_grid(~ Ref, scales = 'free_x')
   print(gp)
 }
 

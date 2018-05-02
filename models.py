@@ -7,6 +7,7 @@ import pandas as pd
 from pandas.api.types import CategoricalDtype
 import xgboost as xgb
 import lightgbm as lgbm
+import catboost
 from sklearn.linear_model import ElasticNetCV
 from sklearn.linear_model import LogisticRegression
 from sklearn.utils.class_weight import compute_sample_weight
@@ -86,6 +87,9 @@ class Regression(object):
     elif self.model_name == 'lgbm':
       self.model_value = lgbm.LGBMRegressor(**self.model_kwargs, n_jobs=multiprocessing.cpu_count() - 1)
       self.model_conf = lgbm.LGBMRegressor(**self.model_kwargs, n_jobs=multiprocessing.cpu_count() - 1)
+    elif self.model_name == 'catboost':
+      self.model_value = catboost.CatBoostRegressor(**self.model_kwargs, logging_level='Silent')
+      self.model_conf = catboost.CatBoostRegressor(**self.model_kwargs, logging_level='Silent')
     elif self.model_name == 'elasticnet':
       self.model_value = ElasticNetCV(**self.model_kwargs, n_jobs=multiprocessing.cpu_count() - 1)
       self.model_conf = ElasticNetCV(**self.model_kwargs, n_jobs=multiprocessing.cpu_count() - 1)

@@ -2,8 +2,10 @@ jupyter
 scipy
 pandas
 sklearn
+scikit-optimize
 xgboost
 lightgbm
+catboost
 matplotlib
 pysam
 neovim

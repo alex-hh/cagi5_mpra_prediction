@@ -39,10 +39,16 @@ def make_roc_curve(ax, cvdf_chunk, color, col='PredValue', fill=False, **kwargs)
   return fpr, tpr, thresholds, auroc
 
 
-def pr_curve(ax, cvdf_chunk, color='k', col='PredValue', fill=False):
+def pr(cvdf_chunk, col='PredValue'):
+  """Calculate the precision and recall."""
   precision, recall, thresholds = \
       precision_recall_curve(cvdf_chunk['class'].abs(), cvdf_chunk[col].abs())
   auprc = auc(recall, precision)
+  return precision, recall, thresholds, auprc
+
+
+def pr_curve(ax, cvdf_chunk, color='k', col='PredValue', fill=False):
+  precision, recall, thresholds, auprc = pr(cvdf_chunk, col)
   ax.step(recall, precision, color=color, alpha=0.2, where='post')
   if fill:
     ax.fill_between(recall, precision, step='post', alpha=0.2, color=color)
