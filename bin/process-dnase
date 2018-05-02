@@ -5,6 +5,15 @@ import pandas as pd
 import os
 import functools
 
+
+def reg_elem(region, cell_line):
+  if 'TERT' == region:
+    return 'TERT-' + cell_line
+  else:
+    return region
+
+
+
 #
 # Config
 #
@@ -19,11 +28,15 @@ training.columns
 training.shape
 
 
-def reg_elem(region, cell_line):
-  if 'TERT' == region:
-    return 'TERT-' + cell_line
-  else:
-    return region
+#
+# Read submission data
+#
+submission = pd.read_csv(
+    data_path('5_saturation_mutagenesis_SubmissionTemplate_01.txt'),
+    sep='\t',
+    na_values='*')
+submission['elem'] = submission['Promoter_Enhancer'].str.replace('MYC', 'MYCrs6983267')
+submission.sample(6)
 
 
 #
@@ -43,3 +56,22 @@ feat_cols = list(filter(lambda col: col.startswith('DNase'), merged.columns.valu
 feats = merged.loc[:, feat_cols].as_matrix()
 assert not np.any(np.isnan(feats))
 np.save(data_path('dnase-features.npy'), feats)
+
+
+#
+# Merge DNase features with submission regions
+#
+merged = submission.merge(dnase_feats, how='left', on=('elem', 'Pos'))
+assert merged.shape[0] == submission.shape[0]  # Incorrect merge bug lead to many more rows
+feat_cols = list(filter(lambda col: col.startswith('DNase'), merged.columns.values))
+feats = merged.loc[:, feat_cols].as_matrix()
+assert not np.any(np.isnan(feats))
+# np.mean(np.isnan(feats))
+# badrows = np.unique(np.argwhere(np.isnan(feats))[:, 0])
+# len(badrows)
+# badrows
+# bad_dnase = merged.iloc[badrows].loc[:, feat_cols].as_matrix()
+# np.apply_along_axis(lambda x: np.any(np.isnan(x)), 1, bad_dnase)
+# bad_merged = merged.iloc[badrows]
+# bad_merged[['Chrom', 'Pos', 'elem']]
+np.save(data_path('dnase-features-submit.npy'), feats)
