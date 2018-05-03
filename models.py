@@ -1,6 +1,7 @@
 import os
 import multiprocessing
 import pickle
+import re
 from functools import partial
 from abc import ABC, abstractmethod
 import numpy as np
