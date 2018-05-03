@@ -177,16 +177,17 @@ class Features(ABC):
 
 class DeepSeaSNP(Features):
 
-  def __init__(self, use_saved_preds=True, feattypes=['diff'], test=False):
+  def __init__(
+      self,
+      use_saved_preds=True,
+      feattypes=['diff'],
+      filename_fmt='deepsea_{}_preds.npy'):
     self.use_saved_preds = use_saved_preds
     self.feattypes = feattypes
-    if test:
-      self.tag = '-test'
-    else:
-      self.tag = ''
+    self.filename_fmt = filename_fmt
 
   def _npy_path(self, variant):
-    return 'data/cagi5_mpra/deepsea{}_{}_preds.npy'.format(self.tag, variant)
+    return os.path.join('data', 'cagi5_mpra', self.filename_fmt.format(variant))
 
   def get_features(self, df, elem=None):
     if self.use_saved_preds:
