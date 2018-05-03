@@ -11,8 +11,9 @@ def seqfeats_from_df(df, seqlen=None, seqfeatextractor='deepsea',
   else:
     ref_sequences = df['ref_sequence']
     alt_sequences = df['alt_sequence']
-  ref_onehot = encode_sequences(ref_sequences, seqlen=seqlen)
-  alt_onehot = encode_sequences(alt_sequences, seqlen=seqlen)
+    snp_inds = df['snp_index']
+  ref_onehot = encode_sequences(ref_sequences, seqlen=seqlen, inds=snp_inds)
+  alt_onehot = encode_sequences(alt_sequences, seqlen=seqlen, inds=snp_inds)
   if seqfeatextractor == 'deepsea':
     # if all_layers:
     #   features = ['2','6','9','13','15']
