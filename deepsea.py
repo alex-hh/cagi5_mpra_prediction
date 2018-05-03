@@ -9,7 +9,8 @@ import numpy as np
 from functools import reduce
 from torch.autograd import Variable
 
-RESULT_DIR = os.environ.get('RESULT_DIR', 'data/remote_results')
+#RESULT_DIR = os.environ.get('RESULT_DIR', 'data/remote_results')
+
 
 
 class LambdaBase(nn.Sequential):
@@ -70,7 +71,7 @@ class DeepSea:
         #self.model = deepsea
         self.model = SelectiveDeepSea(features)
     self.use_gpu = use_gpu
-    pretrained_state_dict = torch.load(RESULT_DIR + '/models-best/deepsea.pth')
+    pretrained_state_dict = torch.load('/home/arh96/consworkdir/deepsea.pth')
     pretrained_state_dict = {'features.' + k: v for k,v in pretrained_state_dict.items()} # rename to match selectivedeepsea namespace below
     self.model.load_state_dict(pretrained_state_dict)
     self.features = features
