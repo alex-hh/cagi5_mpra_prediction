@@ -1,12 +1,13 @@
 import re
 import csv
 import pysam
+import pandas as pd
 import numpy as np
 from sklearn.metrics import roc_curve, auc, precision_recall_curve
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
-from constants import LOCS
+from constants import LOCS, LOCS_V2
 from collections import defaultdict
 
 
@@ -116,27 +117,65 @@ def load_base_seqs(filepath='data/cagi5_mpra/base_seqs.csv'):
       base_seq_dict[reg_el_code]['start'] = int(seqstart)
   return base_seq_dict
 
-def get_seqs_and_inds(df, use_modified=True):
+def get_seqs_and_inds(df, use_modified=True, v=2):
   refs = []
   alts = []
   inds = []
-  base_seq_dict = load_base_seqs()
+  if v==2:
+    base_seq_dict = load_base_seqs('data/cagi5_mpra/base_seqs_v2.csv')
+  else:
+    base_seq_dict = load_base_seqs()
+  if 'regulatory_element' not in df.columns:
+    df['regulatory_element'] = df['Promoter_Enhancer'] 
   for (ix, row) in df.iterrows():
-    reg_el_code = row['regulatory_element'][8:]
+    if re.match('release', row['regulatory_element']):
+      reg_el_code = row['regulatory_element'][8:]
+    else:
+      reg_el_code = row['regulatory_element']
     if re.match('TERT', reg_el_code):
       reg_el_code = 'TERT'
+    if re.match('MYC', reg_el_code):
+      reg_el_code = 'MYCrs6983267MOD'
     if use_modified and reg_el_code+'MOD' in base_seq_dict:
       reg_el_code = reg_el_code + 'MOD'
     seq = base_seq_dict[reg_el_code]['seq']
     start = base_seq_dict[reg_el_code]['start']
 
     rel_pos = row['Pos'] - start - 1
+    # print(row['Pos'], start)
+    # if rel_pos == -1:
+    #   # first position in SORT1 enhancer wasn't included previously
+    #   seq = row['Ref'] + seq
+    #   rel_pos += 1 # i.e. rel_pos is 0 now
+
+    
+
+    # if rel_pos == len(seq):
+    #   seq += row['Ref']
+      # print(rel_pos, len(seq))
+
     if use_modified:
-      # print(row['regulatory_element'], rel_pos, reg_el_code, seq[rel_pos], row['Ref'])
+      print("""Enhancer {}, relative SNP position {}, enhancer type {}
+               retrieved ref nucleotide {}, dataset ref nucleotide {},
+               alt nucleotide {}""".format(
+                row['regulatory_element'], rel_pos, reg_el_code,
+                seq[rel_pos], row['Ref'], row['Alt']))
       assert seq[rel_pos] == row['Ref']
+
     else:
-      if seq[rel_pos] != row['Ref']:
+      if rel_pos >= len(seq):
+        print('Non matching end at index', ix)
+        print('Enhancer {}, position {}, relative pos {}, seq len {}'.format(
+          row['regulatory_element'], row['Pos'], rel_pos, len(seq)))
+        continue
+      elif rel_pos < 0:
         print('Non matching seq at index', ix)
+        print('Enhancer {}, position {}, relative pos {}'.format(
+          row['regulatory_element'], row['Pos'], rel_pos))
+      elif seq[rel_pos] != row['Ref']:
+        print('Non matching seq at index', ix)
+        print('Enhancer {}, position {}, relative pos {}'.format(
+          row['regulatory_element'], row['Pos'], rel_pos))
     
     alt = list(seq)
     alt[rel_pos] = row['Alt']
@@ -147,6 +186,58 @@ def get_seqs_and_inds(df, use_modified=True):
     inds.append(rel_pos)
 
   return refs, alts, inds
+
+def save_base_seqs_v2(df_train, df_test):
+  fasta_file = 'data/remote_data/hg19.genome.fa'
+  ref_sequences = set()
+  ref_dict = {}
+  df_test['#Chrom'] = df_test['Chrom']
+  df_test['regulatory_element'] = 'release_' + df_test['Promoter_Enhancer']
+
+  ref_train, alt_train, inds_train, modified_train = get_check_sequences_cagi5(df_train)
+  ref_test, alt_test, inds_test, modified_test = get_check_sequences_cagi5(df_test)
+  
+  df = pd.concat([df_train, df_test])
+  for (ix,row), ref, ind, mod in zip(df.iterrows(), ref_train+ref_test,
+                                     inds_train+inds_test, modified_train+modified_test):
+    
+    if ref not in ref_sequences: # only add each base seq once
+      suffix = ''
+      reg_el_code = row['regulatory_element'][8:]
+      if re.match('TERT', reg_el_code):
+        reg_el_code = 'TERT'
+      if re.match('MYC', reg_el_code):
+        reg_el_code = 'MYCrs6983267'
+      if mod:
+        suffix += 'MOD'
+        while True:
+          if reg_el_code + suffix in ref_dict:
+            suffix += 'MOD'
+          else:
+            break
+      else:
+        while True:
+          if reg_el_code + suffix in ref_dict:
+            suffix += 'V'
+          else:
+            break
+      ref_dict[reg_el_code + suffix] = ref
+      ref_sequences.add(ref)
+
+  with open('data/cagi5_mpra/base_seqs_v2.csv', 'w') as csvfile:
+    writer = csv.writer(csvfile)
+    writer.writerow(['regulatory_element', 'ref_sequence', 'start_pos'])
+    for k, v in ref_dict.items():
+      if re.search('MOD', k):
+        reg_el_code = k.split('MOD')[0]
+      elif re.search('V', k):
+        reg_el_code = k.split('V')[0]
+      else:
+        reg_el_code = k
+      if reg_el_code not in LOCS_V2:
+        print(k, reg_el_code)
+      seqstart = LOCS_V2[reg_el_code]['start']
+      writer.writerow([k, v, seqstart])
 
 def save_base_seqs(df):
   fasta_file = 'data/remote_data/hg19.genome.fa'
@@ -159,6 +250,7 @@ def save_base_seqs(df):
       if re.match('TERT', reg_el_code):
         reg_el_code = 'TERT'
       if mod:
+        # this assumes that there's only one MOD per enhancer - not necessarily true
         reg_el_code = reg_el_code + 'MOD'
       ref_dict[reg_el_code] = ref
       ref_sequences.add(ref)
@@ -174,7 +266,11 @@ def save_base_seqs(df):
       seqstart = LOCS[reg_el_code]['start']
       writer.writerow([k, v, seqstart])
 
-def get_check_sequences_cagi5(df):
+def get_check_sequences_cagi5(df, v=2):
+  if v == 2:
+    locs = LOCS_V2
+  else:
+    locs = LOCS
   # n.b. we should actually only need to make n reg elements calls to the genome, and to do this only once.
   fasta_file = 'data/remote_data/hg19.genome.fa'
   ref_sequences = []
@@ -186,8 +282,10 @@ def get_check_sequences_cagi5(df):
       reg_el_code = row['regulatory_element'][8:]
       if re.match('TERT', reg_el_code):
         reg_el_code = 'TERT'
-      seqstart = LOCS[reg_el_code]['start']
-      seqend = LOCS[reg_el_code]['end']
+      if re.match('MYC', reg_el_code):
+        reg_el_code = 'MYCrs6983267'
+      seqstart = locs[reg_el_code]['start']
+      seqend = locs[reg_el_code]['end']
       rel_pos = row['Pos']-seqstart-1
       try:
         assert rel_pos >= 0
