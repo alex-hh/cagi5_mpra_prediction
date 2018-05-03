@@ -464,11 +464,13 @@ def encode_sequences(sequences, seqlen=None):
     preprocessed_seqs = sequences
   else:
     for seq in sequences:
-      assert seqlen > len(seq)
-      pad_left = (seqlen - len(seq))//2
-      pad_right = seqlen - (len(seq) + pad_left)
-      seq = 'N'*pad_left + seq + 'N'*pad_right
-      assert len(seq) == seqlen
+      if seqlen > len(seq):
+        pad_left = (seqlen - len(seq))//2
+        pad_right = seqlen - (len(seq) + pad_left)
+        seq = 'N'*pad_left + seq + 'N'*pad_right
+        assert len(seq) == seqlen
+      else:
+        raise Exception('trying to create seqs of length {} but received length {}'.format(seqlen, len(seq)))
       preprocessed_seqs.append(seq)
 
   return encode_strings(preprocessed_seqs)
