@@ -458,6 +458,7 @@ def snp_feats_from_preds(ref_preds, alt_preds, feattypes=[]):
 def encode_sequences(sequences, seqlen=None, inds=None):
   # N.B. that the fact that Basenji, for example, does binned predictions should mean that
   # it actually can be applied to variable length sequences
+  print('Encoding seqs of len {}'.format(500))
   preprocessed_seqs = []
   if seqlen is None:
     # just encode without padding
