@@ -256,17 +256,17 @@ class DSDataKerasModel(Features):
       print('Getting preds for all layers', flush=True)
       ref_ps, alt_ps = [], []
       for l in self.layers:
-        if l == 5 and re.search('dq', self.experiment_name): # if self.model.layers[5].__class__ == 'Bidirectional'
-          print('Trying pooled layer activations')
-          ref_p = self.model_class.pooled_layer_activations(l, ref_onehot)
-          alt_p = self.model_class.pooled_layer_activations(l, alt_oneho5)
-        else:
-          print('Getting preds for layer {}'.format(l), flush=True)
-          ref_p = self.model_class.layer_activations(l, ref_onehot)
-          alt_p = self.model_class.layer_activations(l, alt_onehot)
-          if len(ref_p.shape)==3:
-            ref_p = np.mean(ref_p, axis=1)
-            alt_p = np.mean(alt_p, axis=1)
+        # if l == 5 and re.search('dq', self.experiment_name): # if self.model.layers[5].__class__ == 'Bidirectional'
+        #   print('Trying pooled layer activations')
+        #   ref_p = self.model_class.pooled_layer_activations(l, ref_onehot)
+        #   alt_p = self.model_class.pooled_layer_activations(l, alt_oneho5)
+        # else:
+        print('Getting preds for layer {}'.format(l), flush=True)
+        ref_p = self.model_class.layer_activations(l, ref_onehot)
+        alt_p = self.model_class.layer_activations(l, alt_onehot)
+        if len(ref_p.shape)==3:
+          ref_p = np.mean(ref_p, axis=1)
+          alt_p = np.mean(alt_p, axis=1)
         ref_ps.append(ref_p)
         alt_ps.append(alt_p)
       ref_p = np.concatenate(ref_ps, axis=1)
