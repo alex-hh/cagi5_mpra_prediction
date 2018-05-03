@@ -26,7 +26,7 @@ SEQUENCE_LENGTH = 1000
 # from conservation.layers import MixedResPool, CentralFocussedPool
 # from conservation.model_utils import load_weights
 
-def batch_apply_func(func, X, batch_size=256):
+def batch_apply_func(func, X, batch_size=256, lp=False):
   start = 0
   end = batch_size
   outputs = []
@@ -499,7 +499,7 @@ class DanQ:
     # compute activations for the kth layer
     inp = self.model.input
     out = self.model.layers[k].output
-    func = K.function([inp], [out])
+    func = K.function([inp] + [K.learning_phase()], [out])
     return batch_apply_func(func, X, batch_size=batch_size)
   # def layer_activations(self, k, X):
   #   # compute activations for the kth layer
