@@ -239,7 +239,7 @@ class CNN():
     # compute activations for the kth layer
     inp = self.model.input
     out = self.model.layers[k].output
-    func = K.function([inp], [out])
+    func = K.function([inp] + [K.learning_phase()], [out])
     return batch_apply_func(func, X, batch_size=batch_size)
 
   def pooled_layer_activations(self, k, X, batch_size=100):
