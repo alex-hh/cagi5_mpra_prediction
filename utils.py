@@ -457,6 +457,7 @@ def encode_sequences(sequences, seqlen=None, inds=None):
     # just encode without padding
     preprocessed_seqs = sequences
   else:
+    assert inds is not None
     for i, seq in enumerate(sequences):
       if seqlen > len(seq):
         pad_left = (seqlen - len(seq))//2
