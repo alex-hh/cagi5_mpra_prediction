@@ -74,4 +74,4 @@ assert not np.any(np.isnan(feats))
 # np.apply_along_axis(lambda x: np.any(np.isnan(x)), 1, bad_dnase)
 # bad_merged = merged.iloc[badrows]
 # bad_merged[['Chrom', 'Pos', 'elem']]
-np.save(data_path('dnase-features-submit.npy'), feats)
+np.save(data_path('dnase-features-test.npy'), feats)

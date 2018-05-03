@@ -1,13 +1,17 @@
 import os
 import multiprocessing
 import pickle
+from functools import partial
 from abc import ABC, abstractmethod
 import numpy as np
+import scipy.stats
+import scipy.special
 import pandas as pd
 from pandas.api.types import CategoricalDtype
 import xgboost as xgb
 import lightgbm as lgbm
 import catboost
+from constants import MINP
 from sklearn.linear_model import ElasticNetCV
 from sklearn.linear_model import LogisticRegression
 from sklearn.utils.class_weight import compute_sample_weight
@@ -119,6 +123,48 @@ class Regression(object):
     return df[['Value', 'Confidence']]
 
 
+def linear_scale(x, lower=0, upper=1):
+  """
+  Transform x linearly into the range [lower, upper]
+  """
+  xmin = x.min()
+  xmax = x.max()
+  return lower + (upper - lower) * (x - xmin) / (xmax - xmin)
+
+
+def call_variants_from_regression(df, uncalled_param=1, called_param=1):
+  """
+  Take the output from a Regression model and call variants.
+
+  I.e. estimate each variant's direction, probability of
+  correct direction estimation, confidence score and s.e.
+  of the confidence score.
+  """
+  N = df.shape[0]
+  direction = np.zeros(N, dtype=int)
+  direction[df['PredValue'] >= .1] = 1
+  direction[df['PredValue'] <= -.1] = -1
+  df['Direction'] = direction
+  # Rank the predicted values, we use the ranks to estimate the
+  # probabilities our direction estimate is correct
+  ranks = scipy.stats.rankdata(df['PredValue'].abs())
+  df['ValueRank'] = ranks
+  # What is the highest rank of the uncalled variants (class == 0)?
+  uncalled = direction == 0
+  # Estimate the probability of a correct direction assignment
+  # Scale the ranks to between .5 and 1 for called and separately uncalled variants
+  scaler = partial(linear_scale, lower=MINP, upper=1.)
+  p_direction = np.empty_like(ranks)
+  p_direction[uncalled] = scaler(-ranks[uncalled])
+  p_direction[~uncalled] = scaler(ranks[~uncalled])
+  df['P_Direction'] = p_direction
+  # Use the predicted confidences
+  df['Confidence'] = df['PredConfidence']
+  # Use any old standard error - not sure how to estimate this without an ensemble.
+  df['SE'] = .1
+  return df
+
+
 class Features(ABC):
   """
   Abstract base class for features.
@@ -131,15 +177,22 @@ class Features(ABC):
 
 class DeepSeaSNP(Features):
 
-  def __init__(self, use_saved_preds=True, feattypes=['diff']):
+  def __init__(self, use_saved_preds=True, feattypes=['diff'], test=False):
     self.use_saved_preds = use_saved_preds
     self.feattypes = feattypes
+    if test:
+      self.tag = '-test'
+    else:
+      self.tag = ''
+
+  def _npy_path(self, variant):
+    return 'data/cagi5_mpra/deepsea{}_{}_preds.npy'.format(self.tag, variant)
 
   def get_features(self, df, elem=None):
     if self.use_saved_preds:
       train_inds = df.index.values
-      train_ref = np.load('data/cagi5_mpra/deepsea_ref_preds.npy')[train_inds]
-      train_alt = np.load('data/cagi5_mpra/deepsea_alt_preds.npy')[train_inds]
+      train_ref = np.load(self._npy_path('ref'))[train_inds]
+      train_alt = np.load(self._npy_path('alt'))[train_inds]
 
     return snp_feats_from_preds(train_ref, train_alt, self.feattypes)
 
@@ -161,8 +214,15 @@ class DNase(Features):
   Sequence features derived from downloaded DNase tracks.
   """
 
-  def __init__(self, idxs = None):
-    self.feats = np.load('data/dnase-features.npy')
+  def __init__(self, idxs=None, test=False):
+    """
+    Here idxs are not idxs of data frame rows but idxs of DNase features.
+    """
+    if test:
+      path = 'data/dnase-features-test.npy'
+    else:
+      path = 'data/dnase-features.npy'
+    self.feats = np.load(path)
     if idxs is not None:
       self.feats = self.feats[:, idxs]
 
@@ -336,6 +396,9 @@ class MPRATransfer(Features):
 
 
 class MultiFeatures(Features):
+  """
+  Concatenate several features together.
+  """
   def __init__(self, features):
     self.features = features
 
