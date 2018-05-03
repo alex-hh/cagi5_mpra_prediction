@@ -122,6 +122,39 @@ class Regression(object):
   def get_response(self, df):
     return df[['Value', 'Confidence']]
 
+  @staticmethod
+  def make_submission(preds):
+    """
+    Take the output from a Regression model and call variants.
+
+    I.e. estimate each variant's direction, probability of
+    correct direction estimation, confidence score and s.e.
+    of the confidence score.
+    """
+    N = preds.shape[0]
+    direction = np.zeros(N, dtype=int)
+    direction[preds['PredValue'] >= .1] = 1
+    direction[preds['PredValue'] <= -.1] = -1
+    preds['Direction'] = direction
+    # Rank the predicted values, we use the ranks to estimate the
+    # probabilities our direction estimate is correct
+    ranks = scipy.stats.rankdata(preds['PredValue'].abs())
+    preds['ValueRank'] = ranks
+    # What is the highest rank of the uncalled variants (class == 0)?
+    uncalled = direction == 0
+    # Estimate the probability of a correct direction assignment
+    # Scale the ranks to between .5 and 1 for called and separately uncalled variants
+    scaler = partial(linear_scale, lower=MINP, upper=1.)
+    p_direction = np.empty_like(ranks)
+    p_direction[uncalled] = scaler(-ranks[uncalled])
+    p_direction[~uncalled] = scaler(ranks[~uncalled])
+    preds['P_Direction'] = p_direction
+    # Use the predicted confidences
+    preds['Confidence'] = preds['PredConfidence']
+    # Use any old standard error - not sure how to estimate this without an ensemble.
+    preds['SE'] = .1
+    return preds
+
 
 def linear_scale(x, lower=0, upper=1):
   """
@@ -130,39 +163,6 @@ def linear_scale(x, lower=0, upper=1):
   xmin = x.min()
   xmax = x.max()
   return lower + (upper - lower) * (x - xmin) / (xmax - xmin)
-
-
-def call_variants_from_regression(df, uncalled_param=1, called_param=1):
-  """
-  Take the output from a Regression model and call variants.
-
-  I.e. estimate each variant's direction, probability of
-  correct direction estimation, confidence score and s.e.
-  of the confidence score.
-  """
-  N = df.shape[0]
-  direction = np.zeros(N, dtype=int)
-  direction[df['PredValue'] >= .1] = 1
-  direction[df['PredValue'] <= -.1] = -1
-  df['Direction'] = direction
-  # Rank the predicted values, we use the ranks to estimate the
-  # probabilities our direction estimate is correct
-  ranks = scipy.stats.rankdata(df['PredValue'].abs())
-  df['ValueRank'] = ranks
-  # What is the highest rank of the uncalled variants (class == 0)?
-  uncalled = direction == 0
-  # Estimate the probability of a correct direction assignment
-  # Scale the ranks to between .5 and 1 for called and separately uncalled variants
-  scaler = partial(linear_scale, lower=MINP, upper=1.)
-  p_direction = np.empty_like(ranks)
-  p_direction[uncalled] = scaler(-ranks[uncalled])
-  p_direction[~uncalled] = scaler(ranks[~uncalled])
-  df['P_Direction'] = p_direction
-  # Use the predicted confidences
-  df['Confidence'] = df['PredConfidence']
-  # Use any old standard error - not sure how to estimate this without an ensemble.
-  df['SE'] = .1
-  return df
 
 
 class Features(ABC):
