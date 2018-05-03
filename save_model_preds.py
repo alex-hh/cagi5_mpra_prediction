@@ -28,7 +28,8 @@ def main(seqfeatextractor, layer=None, alllayers=False, dataset='train', seqlen=
     else:
       layers = []
 
-  print('Saving preds from {} model on {} set using seqs of len {} seqs v {}'.format(seqfeatextractor, dataset, seqlen, v))
+  print('Saving preds from {} model layers {} on {} set using seqs of len {} seqs v {}'.format(
+    seqfeatextractor, '-'.join([str(l) for l in layers]), dataset, seqlen, v))
   if dataset == 'train':
     df = pd.read_csv('data/cagi5_df.csv')
   elif dataset == 'test':
@@ -52,7 +53,7 @@ def main(seqfeatextractor, layer=None, alllayers=False, dataset='train', seqlen=
 
   suffix = ''
   if layers:
-    suffix = '-'+'-'.join(layers)
+    suffix = '-'+'-'.join([str(l) for l in layers])
   if dataset == 'test':
     suffix += '-test'
 
