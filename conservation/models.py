@@ -494,10 +494,17 @@ class DanQ:
     self.model.compile(optimizer=optimizer, loss=loss)
     return self.model
 
-  def layer_activations(self, k, X):
+  def layer_activations(self, k, X, batch_size=100):
+    # todo: make this happen in batches
     # compute activations for the kth layer
     inp = self.model.input
     out = self.model.layers[k].output
-    # https://stackoverflow.com/questions/41711190/keras-how-to-get-the-output-of-each-layer
-    func = K.function([inp]+[K.learning_phase()], [out])
-    return func([X, 0.])[0]
+    func = K.function([inp], [out])
+    return batch_apply_func(func, X, batch_size=batch_size)
+  # def layer_activations(self, k, X):
+  #   # compute activations for the kth layer
+  #   inp = self.model.input
+  #   out = self.model.layers[k].output
+  #   # https://stackoverflow.com/questions/41711190/keras-how-to-get-the-output-of-each-layer
+  #   func = K.function([inp]+[K.learning_phase()], [out])
+  #   return func([X, 0.])[0]
