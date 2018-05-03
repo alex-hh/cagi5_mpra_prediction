@@ -72,5 +72,5 @@ if __name__ == '__main__':
   dataset = 'train'
   if args.test:
     dataset = 'test'
-  main(args.seqfeatextractor, seqlen=args.seqlen, alllayers=args.alllayers,
+  main(args.seqfeatextractor, layer=args.layer, seqlen=args.seqlen, alllayers=args.alllayers,
        dataset=dataset, v=args.v)
