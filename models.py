@@ -185,7 +185,7 @@ class DSDataKerasModel(Features):
     self.get_trained_model()
 
     if len(self.layers)==0:
-      m = self.model_class.model
+      m = self.model
       ref_p = m.predict(ref_onehot)
       alt_p = m.predict(alt_onehot)
 
@@ -237,10 +237,16 @@ class DSDataKerasModel(Features):
     return snp_feats_from_preds(ref_p, alt_p, self.feattypes)
 
   def get_trained_model(self):
-    model_class = self.get_untrained_model()
-    model_class.get_compiled_model()
-    model_class.model.load_weights('data/remote_results/models-best/{}.h5'.format(self.experiment_name))
-    self.model_class = model_class
+    if not self.layers:
+      from keras.models import load_model
+      m = load_model('data/remote_results/models-best/{}.h5'.format(self.experiment_name))
+      self.model = m
+    else:
+      model_class = self.get_untrained_model()
+      model_class.get_compiled_model()
+      model_class.model.load_weights('data/remote_results/models-best/{}.h5'.format(self.experiment_name))
+      self.model_class = model_class
+      self.model = self.model_class.model
 
   def get_untrained_model(self):
     settings = pickle.load(open('data/remote_workspace/experiment_settings/{}.p'.format(self.experiment_name), 'rb'))
