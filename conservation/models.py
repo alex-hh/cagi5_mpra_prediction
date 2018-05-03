@@ -36,6 +36,8 @@ def batch_apply_func(func, X, batch_size=256):
     outputs.append(func([X[start:end], 0])[0])
     start = end
     end += batch_size
+    print(end, flush=True)
+
   if X.shape[0] > start:
     outputs.append(func([X[start:X.shape[0]], 0])[0])
   
