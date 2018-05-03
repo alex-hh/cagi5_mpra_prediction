@@ -5,9 +5,9 @@ from abc import ABC, abstractmethod
 import numpy as np
 import pandas as pd
 from pandas.api.types import CategoricalDtype
-import xgboost as xgb
-import lightgbm as lgbm
-import catboost
+#import xgboost as xgb
+#import lightgbm as lgbm
+#import catboost
 from sklearn.linear_model import ElasticNetCV
 from sklearn.linear_model import LogisticRegression
 from sklearn.utils.class_weight import compute_sample_weight
@@ -239,12 +239,14 @@ class DSDataKerasModel(Features):
   def get_trained_model(self):
     if not self.layers:
       from keras.models import load_model
-      m = load_model('data/remote_results/models-best/{}.h5'.format(self.experiment_name))
+      m = load_model('/home/arh96/consworkdir/results/models-best/models-best/{}.h5'.format(self.experiment_name))
+      print('model loaded', flush=True)
       self.model = m
     else:
       model_class = self.get_untrained_model()
       model_class.get_compiled_model()
-      model_class.model.load_weights('data/remote_results/models-best/{}.h5'.format(self.experiment_name))
+      model_class.model.load_weights('/home/arh96/consworkdir/results/models-best/models-best/{}.h5'.format(self.experiment_name))
+      print('weights loaded', flush=True)
       self.model_class = model_class
       self.model = self.model_class.model
 
