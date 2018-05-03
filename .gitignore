@@ -4,6 +4,8 @@ data/remote_workspace
 data/**/*.npy
 data/**/*.zip
 data/deepsea.pth
+slurm-*
+machine*
 plots
 R/tmp
 R/*.html

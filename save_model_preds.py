@@ -35,7 +35,7 @@ def main(seqfeatextractor, alllayers=False, dataset='train', seqlen=1000, v=2):
     if alllayers:
       layers = [3,5,11]
     else:
-      layers = [11]
+      layers = []
   else:
     layers = []
 

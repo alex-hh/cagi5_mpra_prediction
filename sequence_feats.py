@@ -12,6 +12,7 @@ def seqfeats_from_df(df, seqlen=None, seqfeatextractor='deepsea',
     ref_sequences = df['ref_sequence']
     alt_sequences = df['alt_sequence']
     snp_inds = df['snp_index']
+    print(snp_inds, flush=True)
   ref_onehot = encode_sequences(ref_sequences, seqlen=seqlen, inds=snp_inds)
   alt_onehot = encode_sequences(alt_sequences, seqlen=seqlen, inds=snp_inds)
   if seqfeatextractor == 'deepsea':
@@ -31,5 +32,5 @@ def seqfeats_from_df(df, seqlen=None, seqfeatextractor='deepsea',
   else:
     feat_extractor = DSDataKerasModel(experiment_name=seqfeatextractor,
                                       layers=layers)
-    ref_preds, alt_preds = feat_extractor.get_refalt_preds(df)
+    ref_preds, alt_preds = feat_extractor.get_refalt_preds(df, seqlen=seqlen, inds=snp_inds)
   return ref_preds, alt_preds
