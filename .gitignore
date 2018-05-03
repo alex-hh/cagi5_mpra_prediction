@@ -1,6 +1,9 @@
 data/remote_data
 data/remote_results
 data/remote_workspace
+data/**/*.npy
+data/**/*.zip
+data/deepsea.pth
 plots
 R/tmp
 R/*.html

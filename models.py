@@ -245,7 +245,7 @@ class DSDataKerasModel(Features):
     self.get_trained_model()
 
     if len(self.layers)==0:
-      m = self.model_class.model
+      m = self.model
       ref_p = m.predict(ref_onehot)
       alt_p = m.predict(alt_onehot)
 
@@ -275,32 +275,38 @@ class DSDataKerasModel(Features):
       ref_p = np.load(reffname)[train_inds]
       alt_p = np.load(reffname.replace('ref', 'alt'))[train_inds]
 
-      self.model_class = self.get_untrained_model()
-      all_layers = [3,5,11]
-      all_sizes = [self.model_class.model.layers[l].output_shape[-1] for l in all_layers]
-      assert np.sum(all_sizes) == ref_p.shape[1]
+      if self.alllayers:
+        self.model_class = self.get_untrained_model()
+        all_sizes = [self.model_class.model.layers[l].output_shape[-1] for l in self.layers]
+        assert np.sum(all_sizes) == ref_p.shape[1]
 
-      endpoints = np.cumsum(all_sizes)
-      ref_ps, alt_ps = [], []
-      for l in self.layers:
-        ind = all_layers.index(l)
-        endpoint = endpoints[ind]
-        start = endpoint - all_sizes[ind]
-        print(l, start, endpoint)
-        ref_ps.append(ref_p[:, start:endpoint])
-        alt_ps.append(alt_p[:, start:endpoint])
-      ref_p = np.concatenate(ref_ps, axis=1)
-      alt_p = np.concatenate(alt_ps, axis=1)
+        endpoints = np.cumsum(all_sizes)
+        ref_ps, alt_ps = [], []
+        for l in self.layers:
+          ind = all_layers.index(l)
+          endpoint = endpoints[ind]
+          start = endpoint - all_sizes[ind]
+          print(l, start, endpoint)
+          ref_ps.append(ref_p[:, start:endpoint])
+          alt_ps.append(alt_p[:, start:endpoint])
+        ref_p = np.concatenate(ref_ps, axis=1)
+        alt_p = np.concatenate(alt_ps, axis=1)
     else:
       print('calculating preds')
       ref_p, alt_p = self.get_refalt_preds(df)
     return snp_feats_from_preds(ref_p, alt_p, self.feattypes)
 
   def get_trained_model(self):
-    model_class = self.get_untrained_model()
-    model_class.get_compiled_model()
-    model_class.model.load_weights('data/remote_results/models-best/{}.h5'.format(self.experiment_name))
-    self.model_class = model_class
+    if not self.layers:
+      from keras.models import load_model
+      m = load_model('data/remote_results/models-best/{}.h5'.format(self.experiment_name))
+      self.model = m
+    else:
+      model_class = self.get_untrained_model()
+      model_class.get_compiled_model()
+      model_class.model.load_weights('data/remote_results/models-best/{}.h5'.format(self.experiment_name))
+      self.model_class = model_class
+      self.model = self.model_class.model
 
   def get_untrained_model(self):
     settings = pickle.load(open('data/remote_workspace/experiment_settings/{}.p'.format(self.experiment_name), 'rb'))

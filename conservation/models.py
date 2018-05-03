@@ -71,24 +71,55 @@ class CNN():
                        of (lowres_stride, highres_stride) tuples
   """
   def __init__(self, filters=[64, 64, 64], kernel_size=[15, 15, 15], pooling_size=[8, 2, 2], conv_dropout=0.,
-               dense_dropout=0., flatten_dropout=0., lr=0.001, motif_embedding_dim=None,
+               conv_drop_first_layer_only=False,
+               dense_dropout=0., flatten_dropout=0., lr=0.001,
+               motif_embedding_dim=None, depthwise_conv=False,
+               motif_embedding_relu=False,
                channels=4, first_layer_no_bias=False, activation_fn='lrelu', dense_units=[919],
-               batch_normalization=False, reg_weighting = None, reg_scaling=1., loss='binary_crossentropy',
+               conv_batch_normalization=False, dense_batch_normalization=False, bn_layer1=False,
+               reg_weighting=None, reg_scaling=1., loss='binary_crossentropy',
                pos_weight=None, output_dim=919, pooling_stride=[8, 2, 2], highres_starts=[None, None, None], 
-               highres_ends=[None, None, None], pooltype='max', 
+               highres_ends=[None, None, None], pooltype='max', recurrent=False,
+               global_pooltype=None, dilated=False, dilation_rates=[],
+               conv_padding=[], batch_norm_momentum=0.99,
+               return_sequences=True, ncell=100,
+               stack_pool_sizes=[], nstack=1, concat_pooled_conv=False,
+               conv_layer_dropout=[], K=5, k_add_avg=False,
+               sequence_length=1000,
+               optimizer='adam',
+               final_pool_size=None,
+               recurrent_dropout=[0.], recurrent_input_dropout=[0.],
                lowres_pool=16, standardres_pool=12, highres_pool=8):
-    
+    assert len(stack_pool_sizes) == nstack - 1
+    # print(len(recurrent_dropout), nstack)
+    # recurrent_dropout = check_rec_dropout(recurrent_dropout, nstack)
+    # recurrent_input_dropout = check_rec_dropout(recurrent_input_dropout, nstack)
+    if recurrent:
+      assert len(recurrent_dropout) == nstack, str(recurrent_dropout) + str(nstack)
+      assert len(recurrent_input_dropout) == nstack
     if len(highres_starts) != len(pooling_stride) and pooltype in ['max', 'central']:
       highres_starts = [None for i in pooling_size]
       highres_ends = highres_starts
     print(kernel_size, len(kernel_size))
+    if len(conv_padding)>0:
+      assert len(conv_padding) == len(kernel_size)
+    if len(conv_layer_dropout)>0:
+      assert len(conv_layer_dropout) == len(kernel_size)
+    # else:
+    #   conv_layer_dropout = [conv_dropout for i in kernel_size]
+    if dilated:
+      assert len(dilation_rates) == len(kernel_size)
+    else:
+      dilation_rates = [1 for i in kernel_size]
     assert len(pooling_stride) == len(pooling_size) == len(kernel_size) == len(filters) == len(highres_starts) == len(highres_ends),\
           "Must specify equal number of pooling and conv paramters, pst {}, ps {}, ks, {}, f {}, hs {} ,he {}".format(len(pooling_stride),
             len(pooling_size), len(kernel_size),len(filters), len(highres_starts), len(highres_ends))
     self.filters = filters
     self.kernel_size = kernel_size
+    self.k_add_avg = k_add_avg
     self.pooling_size = pooling_size
     self.conv_dropout = conv_dropout
+    self.conv_layer_dropout = conv_layer_dropout
     self.dense_dropout = dense_dropout
     self.flatten_dropout = flatten_dropout
     self.lr = lr
@@ -96,15 +127,20 @@ class CNN():
     self.first_layer_no_bias = first_layer_no_bias
     self.activation_fn = self.get_activation_layer(activation_fn)
     self.dense_units = dense_units
-    self.batch_normalization = batch_normalization
+    self.conv_batch_normalization = conv_batch_normalization
+    self.dense_batch_normalization = dense_batch_normalization
     self.reg_weighting = reg_weighting    
     self.reg_scaling = reg_scaling
     self.model = None
+    self.K = K
     self.output_dim = output_dim
     self.loss = loss
+    self.recurrent_dropout = recurrent_dropout
+    self.recurrent_input_dropout = recurrent_input_dropout
     if type(pos_weight) == str:
       pos_weight = np.load('/scratch/arh96/conservation/data/{}.npy'.format(pos_weight))
     self.pos_weight = pos_weight
+    self.optimizer = optimizer
     self.pooling_stride = pooling_stride
     self.highres_starts = highres_starts
     self.highres_ends = highres_ends
@@ -113,19 +149,80 @@ class CNN():
     self.lowres_pool = lowres_pool
     self.standardres_pool = standardres_pool
     self.highres_pool = highres_pool
+    self.recurrent = recurrent
+    self.return_sequences = return_sequences
+    self.ncell = ncell
+    self.nstack = nstack
+    self.depthwise_conv = depthwise_conv
+    self.stack_pool_sizes = stack_pool_sizes
+    self.global_pooltype = global_pooltype
+    self.conv_padding = conv_padding
+    self.bn_layer1 = bn_layer1
+    self.dilated = dilated
+    self.dilation_rates = dilation_rates
+    self.batch_norm_momentum = batch_norm_momentum
+    self.motif_embedding_relu = motif_embedding_relu
+    self.conv_drop_first_layer_only = conv_drop_first_layer_only
+    self.sequence_length = sequence_length
+    self.final_pool_size = final_pool_size
+    self.concat_pooled_conv = concat_pooled_conv
 
   def get_compiled_model(self):
     loss = self.loss
+    if loss == 'weighted_binary_crossentropy':
+      print('using weighted crossentropy loss', flush=True)
+      assert self.pos_weight is not None
+      loss = partial(weighted_binary_crossentropy, pos_weight=self.pos_weight)
+      update_wrapper(loss, weighted_binary_crossentropy)
       # http://louistiao.me/posts/adding-__name__-and-__doc__-attributes-to-functoolspartial-objects/
     if self.model == None:
       self.build_model()
-    self.model.compile(optimizer=Adam(self.lr), loss=loss, metrics = [metrics.binary_crossentropy])
+    if self.optimizer == 'adam':
+      self.model.compile(optimizer=Adam(self.lr), loss=loss, metrics = [metrics.binary_crossentropy])
+    elif self.optimizer == 'sgd':
+      self.model.compile(optimizer=SGD(lr=self.lr, momentum=0.9), loss=loss)
+    else:
+      raise ValueError('opimizer must be either adam or sgd')
     return self.model
 
   def build_model(self, final_layer=True, conv_only=False):
-    inputs = Input(shape=(SEQUENCE_LENGTH, self.channels))
+    inputs = Input(shape=(self.sequence_length, self.channels))
     x = self.apply_convolutions(inputs)
-    x = Flatten()(x)
+    if self.recurrent:
+      for i in range(self.nstack):
+        if i > 0:
+          p = self.stack_pool_sizes[i-1] # no pooling before first lstm layer
+          if p is not None:
+            x = MaxPooling1D(pool_size=p, strides=p)(x)
+        stack_cell = LSTM(self.ncell, return_sequences=self.return_sequences,
+                          recurrent_dropout=self.recurrent_dropout[i],
+                          dropout=self.recurrent_input_dropout[i])
+        x = Bidirectional(stack_cell, merge_mode='concat')(x)
+
+      # cell = LSTM(self.ncell, return_sequences=self.return_sequences)
+      # x = Bidirectional(cell, merge_mode='concat')(x)
+    if self.global_pooltype == 'mean':
+      x = GlobalAveragePooling1D()(x)
+      if self.concat_pooled_conv:
+        x = layers.Concatenate(axis=-1)([x, self.c])
+    elif self.global_pooltype == 'max':
+      x = GlobalMaxPooling1D()(x)
+      if self.concat_pooled_conv:
+        x = layers.Concatenate(axis=-1)([x, self.c])
+    elif self.global_pooltype == 'meanmax':
+      xmax = GlobalMaxPooling1D()(x)
+      xmu = GlobalAveragePooling1D()(x)
+      x = layers.Concatenate(axis=-1)([xmax, xmu])
+      # x = Flatten()(x)
+    elif self.global_pooltype == 'kmax':
+      x = KMaxPool(K=self.K,
+                   add_avg=self.k_add_avg)(x)
+      x = Flatten()(x)
+    elif self.global_pooltype == 'maxpools':
+      x = MaxPooling1D(self.final_pool_size)(x)
+      x = Flatten()(x)
+    else:
+      x = Flatten()(x)
     if conv_only:
       self.model = Model(inputs, x)
       return  
@@ -140,7 +237,7 @@ class CNN():
     # compute activations for the kth layer
     inp = self.model.input
     out = self.model.layers[k].output
-    func = K.function([inp, K.learning_phase()], [out])
+    func = K.function([inp], [out])
     return batch_apply_func(func, X, batch_size=batch_size)
 
   def pooled_layer_activations(self, k, X, batch_size=100):
@@ -184,10 +281,21 @@ class CNN():
     x_length = 1000
     embed_i = 0 # used to iterate over embedding dims
     # print('here', flush=True)
-    for idx, params in enumerate(zip(self.filters, self.kernel_size, self.pooling_size, self.pooling_stride, self.highres_starts, self.highres_ends)):
-      f, k, p, p_st, h_start, h_end = params
+    for idx, params in enumerate(zip(self.filters, self.kernel_size, self.pooling_size, self.pooling_stride, self.highres_starts, self.highres_ends, self.dilation_rates)):
+      f, k, p, p_st, h_start, h_end, d = params
+      if len(self.conv_padding)>0:
+        padtype = self.conv_padding[idx]
+      else:
+        padtype = 'valid'
+      if idx == 1 and self.depthwise_conv:
+        x = Reshape((1, pool_layer.output_shape[1], pool_layer.output_shape[-1]))(x)
+        # 2d conv takes input of format (batch, height, width, channels)
+        conv_layer = SeparableConv2D(f, (1, k),
+                                     depth_multiplier=1, use_bias=False) # kernel size is width, height
+        x = conv_layer(x)
+        x = Reshape((conv_layer.output_shape[2], conv_layer.output_shape[-1]))(x)
       if idx == 0 and self.first_layer_no_bias:
-        x = Conv1D(f, k, use_bias=False)(x)
+        x = Conv1D(f, k, use_bias=False, dilation_rate=d)(x)
         x_length = x_length - k + 1
         # Conv1D input shape (batch_size, steps, input_dim) -- i.e. (batch_size, n_basepairs, input_dim)
         # Conv1D filters are applied to windows of width k of data along the 'steps' dimension (first dimension)
@@ -205,29 +313,30 @@ class CNN():
           x = layers.Concatenate(axis=-1)(xs)
           x_length = x_length
         else:
-          x = Conv1D(f, k)(x)
+          x = Conv1D(f, k, padding=padtype)(x)
           x_length = x_length - k + 1
         # central_basepair_start = self.central_basepair_starts[-1] -k... something like this. to track receptive fields of central nucleotide
       # print('adding activation', self.activation_fn.__class__.__name__)
       x = LeakyReLU(0.01)(x) # leaky relu has no weights so this should be fine
-      if self.batch_normalization:
-        x = BatchNormalization()(x)
-      # if idx == 0 and p is not None and self.pooltype == 'central':
-      #   pool_layer = CentralFocussedPool(layer1_conv=k, lowres_pool=self.lowres_pool, standardres_pool=self.standardres_pool,
-      #                                    highres_pool=self.highres_pool)
-      #   x = pool_layer(x)
-      #   x_length = pool_layer.compute_output_shape((10,x_length,4))[1]
+      if self.conv_batch_normalization:
+        if idx>0 or (idx == 0 and self.bn_layer1):
+          x = BatchNormalization(momentum=self.batch_norm_momentum)(x)
+      if idx == 0 and p is not None and self.pooltype == 'central':
+        pool_layer = CentralFocussedPool(layer1_conv=k, lowres_pool=self.lowres_pool, standardres_pool=self.standardres_pool,
+                                         highres_pool=self.highres_pool)
+        x = pool_layer(x)
+        x_length = pool_layer.compute_output_shape((10,x_length,4))[1]
       elif h_start is None and p is not None:     
-        x = MaxPooling1D(p, strides=p_st)(x)
+        pool_layer = MaxPooling1D(p, strides=p_st)
+        x = pool_layer(x)
         x_length = x_length // p 
-      # elif p is not None:
-      #   pool_layer = MixedResPool(highres_start=h_start, input_length=x_length,
-      #                             highres_end=h_end, pool_length=p, lowres_stride=p_st[0],
-      #                             highres_stride=p_st[1])
-      #   x = pool_layer(x)
-      #   x_length = sum(pool_layer.resolution_lengths())
-      if self.conv_dropout > 0 and p is not None:
-        x = Dropout(self.conv_dropout)(x)
+      elif p is not None:
+        pool_layer = MixedResPool(highres_start=h_start, input_length=x_length,
+                                  highres_end=h_end, pool_length=p, lowres_stride=p_st[0],
+                                  highres_stride=p_st[1])
+        x = pool_layer(x)
+        x_length = sum(pool_layer.resolution_lengths())
+      
       if self.motif_embedding_dim:
         # 1x1 convolution projects the motifs onto a smaller space
         # todo - test whether this is better before or after the pool - defo after - think about the dim reduction
@@ -239,15 +348,27 @@ class CNN():
             embedding_dim = self.motif_embedding_dim[embed_i]
             embed_i += 1
         if embedding_dim is not None:
-          x = Conv1D(embedding_dim, 1, activation=None, use_bias=False)(x)
+          if self.motif_embedding_relu:
+            x = Conv1D(embedding_dim, 1, activation='relu', use_bias=False)(x)
+          else:
+            x = Conv1D(embedding_dim, 1, activation=None, use_bias=False)(x)
+
+      if self.concat_pooled_conv:
+        self.c = GlobalAveragePooling1D()(x)
+      
+      if len(self.conv_layer_dropout)>0:
+        x = Dropout(self.conv_layer_dropout[idx])(x)
+      elif self.conv_dropout > 0 and idx != len(self.filters)-1:
+        if (self.conv_drop_first_layer_only and idx == 0) or not self.conv_drop_first_layer_only:
+          x = Dropout(self.conv_dropout)(x)
     return x
 
   def apply_dense(self, x):
     for units in self.dense_units:
       x = Dense(units)(x)
       x = self.activation_fn(x)
-      if self.batch_normalization:
-        x = BatchNormalization()(x)
+      if self.dense_batch_normalization:
+        x = BatchNormalization(momentum=self.batch_norm_momentum)(x)
       x = Dropout(self.dense_dropout)(x)
     return x
     
@@ -270,21 +391,26 @@ class CNN():
     else:
       return Activation('relu')
 
+
 class DanQ:
   # TODO: think about converting this to the functional API
   def __init__(self, loss='binary_crossentropy', lr=0.001, output_dim=919, hidden_dim=[925],
-               cell_type='LSTM', final_layer=True, ncell=320, optimizer='rmsprop',
+               cell_type='LSTM', final_layer=True, ncell=320, optimizer='adam',
                return_sequences=True, nconv=320, pooltype='uniform', motif_embedding_dim=None,
                global_pooltype=None,
-               nstack=1,
-               kernel_size=26,
+               nstack=1, recurrent_dropout=0., recurrent_input_dropout=0.,
+               kernel_size=26, K=5, k_add_avg=False,
                convdropout=0.2, preembed_dropout=0., lstmdropout=0.5, hidden_drop=[None], pool_size=13,
-               lowres_pool=26, standardres_pool=17, highres_pool=11, stack_pool_size=None):
+               lowres_pool=26, standardres_pool=17, highres_pool=11, stack_pool_sizes=[],
+               highres_bp=300, standardres_bp=600, sequence_length=1000):
+    assert len(stack_pool_sizes) == nstack - 1
+    if global_pooltype == 'kmax':
+      print('Kmax', K)
     self.loss = loss
     self.optimizer = optimizer
     self.lr = lr
     self.model = Sequential()
-    self.model.add(Conv1D(input_shape=(1000,4),
+    self.model.add(Conv1D(input_shape=(sequence_length,4),
                           filters=nconv,
                           kernel_size=kernel_size,
                           padding="valid",
@@ -295,9 +421,11 @@ class DanQ:
     elif pooltype == 'mixedres':
       self.model.add(MixedResPool())
     elif pooltype == 'central':
-      self.model.add(CentralFocussedPool(layer1_conv=26, lowres_pool=lowres_pool,
+      self.model.add(CentralFocussedPool(layer1_conv=kernel_size, lowres_pool=lowres_pool,
                                          standardres_pool=standardres_pool,
-                                         highres_pool=highres_pool))
+                                         highres_pool=highres_pool,
+                                         highres_bp=highres_bp,
+                                         standardres_bp=standardres_bp))
     self.model.add(Dropout(preembed_dropout))
     if motif_embedding_dim is not None:
       self.model.add(Conv1D(motif_embedding_dim, 1, activation=None, use_bias=False))
@@ -310,14 +438,23 @@ class DanQ:
     #   cell = GRU(ncell, return_sequences=True if stack else return_sequences)
     # self.model.add(Bidirectional(cell, merge_mode='concat'))
     for i in range(nstack):
-      if stack_pool_size is not None and i > 0:
-        self.model.add(MaxPooling1D(pool_size=2, strides=2))
-      stack_cell = LSTM(ncell, return_sequences=return_sequences)
+      if i > 0:
+        p = stack_pool_sizes[i-1] # no pooling before first lstm layer
+        if p is not None:
+          self.model.add(MaxPooling1D(pool_size=p, strides=p))
+      stack_cell = LSTM(ncell, return_sequences=return_sequences,
+                        dropout=recurrent_input_dropout, recurrent_dropout=recurrent_dropout)
       self.model.add(Bidirectional(stack_cell, merge_mode='concat'))
 
     if global_pooltype == 'mean':
       self.model.add(GlobalAveragePooling1D())
+    elif global_pooltype == 'max':
+      self.model.add(GlobalMaxPooling1D())
+    elif global_pooltype == 'kmax':
+      self.model.add(KMaxPool(K=K, add_avg=k_add_avg))
+      self.model.add(Flatten())
 
+    # if global_pooltype is None:
     self.model.add(Dropout(lstmdropout)) # can't delete this - it messes with the load weights
 
     if return_sequences and global_pooltype is None:
@@ -348,16 +485,17 @@ class DanQ:
       # optimizer='rmsprop', class_mode='binary' are DanQ defaults.
     if self.optimizer == 'rmsprop':
       optimizer = RMSprop(self.lr)
-    else:
+    elif self.optimizer == 'adam':
       optimizer = Adam(self.lr)
+    elif self.optimizer == 'sgd':
+      optimizer = SGD(lr=self.lr, momentum=0.9)
     self.model.compile(optimizer=optimizer, loss=loss)
     return self.model
 
-  def layer_activations(self, k, X, batch_size=100):
+  def layer_activations(self, k, X):
     # compute activations for the kth layer
-    # https://keras.io/getting-started/faq/#how-can-i-obtain-the-output-of-an-intermediate-layer
-    inp = self.model.layers[0].input 
+    inp = self.model.input
     out = self.model.layers[k].output
-    # K.set_learning_phase(0)
-    func = K.function([inp, K.learning_phase()], [out])
-    return batch_apply_func(func, X, batch_size=batch_size)
+    # https://stackoverflow.com/questions/41711190/keras-how-to-get-the-output-of-each-layer
+    func = K.function([inp]+[K.learning_phase()], [out])
+    return func([X, 0.])[0]

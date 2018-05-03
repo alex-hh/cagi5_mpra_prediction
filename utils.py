@@ -448,20 +448,33 @@ def snp_feats_from_preds(ref_preds, alt_preds, feattypes=[]):
       calculated_feats.append(log_odds_ratio)
   return np.concatenate(calculated_feats, axis=1)
 
-def encode_sequences(sequences, seqlen=None):
+def encode_sequences(sequences, seqlen=None, inds=None):
   # N.B. that the fact that Basenji, for example, does binned predictions should mean that
   # it actually can be applied to variable length sequences
+  print('Encoding seqs of len {}'.format(500))
   preprocessed_seqs = []
   if seqlen is None:
     # just encode without padding
     preprocessed_seqs = sequences
   else:
-    for seq in sequences:
-      assert seqlen > len(seq)
-      pad_left = (seqlen - len(seq))//2
-      pad_right = seqlen - (len(seq) + pad_left)
-      seq = 'N'*pad_left + seq + 'N'*pad_right
+    for i, seq in enumerate(sequences):
+      if seqlen > len(seq):
+        pad_left = (seqlen - len(seq))//2
+        pad_right = seqlen - (len(seq) + pad_left)
+        seq = 'N'*pad_left + seq + 'N'*pad_right
+      else:
+        snp_ind = inds[i]
+        avail_right = len(seq) - snp_ind
+        if avail_right > snp_ind:
+          start = 0
+          end = seqlen
+        else:
+          start = len(seq) - 500
+          end = len(seq)
+        seq = seq[start:end]
       assert len(seq) == seqlen
+        # we want to make it roughly central b.c. the local info is the most important
+        # raise Exception('trying to create seqs of length {} but received length {}'.format(seqlen, len(seq)))
       preprocessed_seqs.append(seq)
 
   return encode_strings(preprocessed_seqs)

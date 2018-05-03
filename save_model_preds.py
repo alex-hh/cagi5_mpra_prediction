@@ -36,6 +36,8 @@ def main(seqfeatextractor, alllayers=False, dataset='train', seqlen=1000, v=2):
       layers = [3,5,11]
     else:
       layers = [11]
+  else:
+    layers = []
 
   print('getting preds', flush=True)
   refp, altp = seqfeats_from_df(df, use_gpu=False, seqlen=seqlen, # target sequence length - i.e. how much padding should be applied
