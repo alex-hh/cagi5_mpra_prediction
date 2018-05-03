@@ -4,8 +4,12 @@ import pysam
 import pandas as pd
 import numpy as np
 from sklearn.metrics import roc_curve, auc, precision_recall_curve
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
+try:
+  import matplotlib.pyplot as plt
+  import matplotlib.cm as cm
+except ImportError:
+  import warnings
+  warnings.warn('Unable to import matplotlib, not all functionality will work.')
 
 from constants import LOCS, LOCS_V2
 from collections import defaultdict
