@@ -493,3 +493,9 @@ def snpfeats_from_df(df, seqlen=None, seqfeatextractor='deepsea',
   feats = snp_feats_from_preds(ref_preds, alt_preds,
                                feattypes=[compfeattype] if type(compfeattype)==str else compfeattype)
   return feats
+
+
+def write_submission(submission, filename):
+  print('Writing submission to: {}'.format(filename))
+  columns = ['Chrom', 'Pos', 'Ref', 'Alt', 'Promoter_Enhancer', 'Direction', 'P_Direction', 'Confidence', 'SE', 'Comments']
+  submission[columns].to_csv(filename, sep='\t', index=False, float_format='%f')

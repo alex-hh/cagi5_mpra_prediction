@@ -145,13 +145,13 @@ class Regression(object):
     uncalled = direction == 0
     # Estimate the probability of a correct direction assignment
     # Scale the ranks to between .5 and 1 for called and separately uncalled variants
-    scaler = partial(linear_scale, lower=MINP, upper=1.)
+    scaler = partial(linear_scale, lower=MINP, upper=1. - 1e-7)
     p_direction = np.empty_like(ranks)
     p_direction[uncalled] = scaler(-ranks[uncalled])
     p_direction[~uncalled] = scaler(ranks[~uncalled])
-    preds['P_Direction'] = p_direction
+    preds['P_Direction'] = np.clip(p_direction, 1e-5, 1 - 1e-5)
     # Use the predicted confidences
-    preds['Confidence'] = preds['PredConfidence']
+    preds['Confidence'] = np.clip(preds['PredConfidence'], 1e-5, 1 - 1e-5)
     # Use any old standard error - not sure how to estimate this without an ensemble.
     preds['SE'] = .1
     return preds
