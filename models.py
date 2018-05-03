@@ -250,8 +250,10 @@ class DSDataKerasModel(Features):
       alt_p = m.predict(alt_onehot)
 
     else:
+      print('Getting preds for all layers', flush=True)
       ref_ps, alt_ps = [], []
       for l in self.layers:
+        print('Getting preds for layer {}'.format(l), flush=True)
         ref_p = self.model_class.layer_activations(l, ref_onehot)
         alt_p = self.model_class.layer_activations(l, alt_onehot)
         if len(ref_p.shape)==3:
