@@ -1,0 +1,34 @@
+#!/usr/bin/env python
+
+"""
+Get the conservation scores for the test data.
+"""
+
+import pandas as pd
+from utils import get_cons_scores
+
+
+#
+# Load the submission data
+#
+submission = pd.read_csv(
+    'data/5_saturation_mutagenesis_SubmissionTemplate_01.txt',
+    sep='\t',
+    na_values='*')
+submission.sample(6)
+
+
+#
+# Get the conservation scores
+#
+ph_scores, php_scores, gerpn_scores, gerprs_scores = get_cons_scores(submission)
+submission['phastCon'] = ph_scores
+submission['phyloP'] = php_scores
+submission['GerpN'] = gerpn_scores
+submission['GerpRS'] = gerprs_scores
+
+
+#
+# Save the scores
+#
+submission.to_csv('data/submission-with-cons.tsv', sep='\t')
