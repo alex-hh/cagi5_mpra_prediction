@@ -178,10 +178,10 @@ class DSDataKerasModel(Features):
     self.layers = layers
     self.alllayers = alllayers
 
-  def get_refalt_preds(self, df):
+  def get_refalt_preds(self, df, seqlen=1000):
     assert 'ref_sequence' in df.columns
-    ref_onehot = encode_sequences(df['ref_sequence'], seqlen=1000)
-    alt_onehot = encode_sequences(df['alt_sequence'], seqlen=1000)
+    ref_onehot = encode_sequences(df['ref_sequence'], seqlen=seqlen)
+    alt_onehot = encode_sequences(df['alt_sequence'], seqlen=seqlen)
     self.get_trained_model()
 
     if len(self.layers)==0:
