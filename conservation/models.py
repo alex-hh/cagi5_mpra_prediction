@@ -26,7 +26,7 @@ SEQUENCE_LENGTH = 1000
 # from conservation.layers import MixedResPool, CentralFocussedPool
 # from conservation.model_utils import load_weights
 
-def batch_apply_func(func, X, batch_size=256):
+def batch_apply_func(func, X, batch_size=256, lp=False):
   start = 0
   end = batch_size
   outputs = []
@@ -36,7 +36,7 @@ def batch_apply_func(func, X, batch_size=256):
     outputs.append(func([X[start:end], 0])[0])
     start = end
     end += batch_size
-    print(end, flush=True)
+    # print(end, flush=True)
 
   if X.shape[0] > start:
     outputs.append(func([X[start:X.shape[0]], 0])[0])
@@ -494,10 +494,17 @@ class DanQ:
     self.model.compile(optimizer=optimizer, loss=loss)
     return self.model
 
-  def layer_activations(self, k, X):
+  def layer_activations(self, k, X, batch_size=100):
+    # todo: make this happen in batches
     # compute activations for the kth layer
     inp = self.model.input
     out = self.model.layers[k].output
-    # https://stackoverflow.com/questions/41711190/keras-how-to-get-the-output-of-each-layer
-    func = K.function([inp]+[K.learning_phase()], [out])
-    return func([X, 0.])[0]
+    func = K.function([inp] + [K.learning_phase()], [out])
+    return batch_apply_func(func, X, batch_size=batch_size)
+  # def layer_activations(self, k, X):
+  #   # compute activations for the kth layer
+  #   inp = self.model.input
+  #   out = self.model.layers[k].output
+  #   # https://stackoverflow.com/questions/41711190/keras-how-to-get-the-output-of-each-layer
+  #   func = K.function([inp]+[K.learning_phase()], [out])
+  #   return func([X, 0.])[0]
