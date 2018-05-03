@@ -31,5 +31,5 @@ def seqfeats_from_df(df, seqlen=None, seqfeatextractor='deepsea',
   else:
     feat_extractor = DSDataKerasModel(experiment_name=seqfeatextractor,
                                       layers=layers)
-    ref_preds, alt_preds = feat_extractor.get_refalt_preds(df)
+    ref_preds, alt_preds = feat_extractor.get_refalt_preds(df, seqlen=seqlen)
   return ref_preds, alt_preds

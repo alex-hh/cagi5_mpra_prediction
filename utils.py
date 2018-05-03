@@ -9,6 +9,7 @@ import matplotlib.cm as cm
 
 from constants import LOCS, LOCS_V2
 from collections import defaultdict
+from validate import score_preds, pr
 
 
 def make_plots(cvdf_chunk, col='PredValue'):
@@ -38,14 +39,6 @@ def make_roc_curve(ax, cvdf_chunk, color, col='PredValue', fill=False, **kwargs)
   if fill:
     ax.fill_between(fpr, tpr, step='post', alpha=0.2, color=color)
   return fpr, tpr, thresholds, auroc
-
-
-def pr(cvdf_chunk, col='PredValue'):
-  """Calculate the precision and recall."""
-  precision, recall, thresholds = \
-      precision_recall_curve(cvdf_chunk['class'].abs(), cvdf_chunk[col].abs())
-  auprc = auc(recall, precision)
-  return precision, recall, thresholds, auprc
 
 
 def pr_curve(ax, cvdf_chunk, color='k', col='PredValue', fill=False):
@@ -176,7 +169,7 @@ def get_seqs_and_inds(df, use_modified=True, v=2):
         print('Non matching seq at index', ix)
         print('Enhancer {}, position {}, relative pos {}'.format(
           row['regulatory_element'], row['Pos'], rel_pos))
-    
+
     alt = list(seq)
     alt[rel_pos] = row['Alt']
     alt = ''.join(alt)
@@ -196,11 +189,11 @@ def save_base_seqs_v2(df_train, df_test):
 
   ref_train, alt_train, inds_train, modified_train = get_check_sequences_cagi5(df_train)
   ref_test, alt_test, inds_test, modified_test = get_check_sequences_cagi5(df_test)
-  
+
   df = pd.concat([df_train, df_test])
   for (ix,row), ref, ind, mod in zip(df.iterrows(), ref_train+ref_test,
                                      inds_train+inds_test, modified_train+modified_test):
-    
+
     if ref not in ref_sequences: # only add each base seq once
       suffix = ''
       reg_el_code = row['regulatory_element'][8:]
@@ -387,7 +380,7 @@ def get_sequences(df, which_set='cagi4'):
 
           alt = list(str(dnastr))
           alt = ''.join(alt[:ref_start] + list(row['AltAllele']) + alt[ref_end:])
-          
+
           assert len(dnastr) == 150
 
         else:
@@ -495,13 +488,3 @@ def snpfeats_from_df(df, seqlen=None, seqfeatextractor='deepsea',
   feats = snp_feats_from_preds(ref_preds, alt_preds,
                                feattypes=[compfeattype] if type(compfeattype)==str else compfeattype)
   return feats
-
-def score_preds(preds, df=None, y=None):
-  if df is not None:
-    y = df['emVar_Hit']
-  else:
-    assert y is not None
-  roc_score = roc_auc_score(y, preds)
-  auprc_score = average_precision_score(y, preds)
-  print('AUROC:\t{}\tAUPRC:\t{}'.format(roc_score, auprc_score))
-  return roc_score, auprc_score
