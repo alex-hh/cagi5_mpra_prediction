@@ -25,6 +25,11 @@ def main(seqfeatextractor, layer=None, alllayers=False, dataset='train', seqlen=
         layers = [3,5,11]
       else:
         layers = []
+    elif re.search('crnn', seqfeatextractor):
+      if alllayers:
+        layers = [4,9,16]
+      else:
+        layers = []
     else:
       layers = []
 
