@@ -232,11 +232,13 @@ class DNase(Features):
 
 class DSDataKerasModel(Features):
 
-  def __init__(self, experiment_name, feattypes=['diff'], alllayers=False, layers=[]):
+  def __init__(self, experiment_name, feattypes=['diff'], alllayers=False, layers=[],
+               filesuffix=''):
     self.feattypes = feattypes
     self.experiment_name = experiment_name
     self.layers = layers
     self.alllayers = alllayers
+    self.filesuffix = filesuffix
 
   def get_refalt_preds(self, df, seqlen=1000, inds=None):
     assert 'ref_sequence' in df.columns
@@ -266,10 +268,7 @@ class DSDataKerasModel(Features):
     return ref_p, alt_p
 
   def get_features(self, df, elem=None):
-    suffix = ''
-    if self.alllayers:
-      suffix = '-all'
-    reffname = 'data/cagi5_mpra/{}_ref_preds.npy'.format(self.experiment_name + suffix)
+    reffname = 'data/cagi5_mpra/{}_ref_preds.npy'.format(self.experiment_name + self.filesuffix)
     train_inds = df.index.values
     if os.path.isfile(reffname):
 
