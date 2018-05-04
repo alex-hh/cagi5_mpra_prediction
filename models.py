@@ -157,6 +157,108 @@ class Regression(object):
     return preds
 
 
+class StackedRegressionClassifier(object):
+  """
+  Fits regression models to Value and Confidence. Stacks these predictions with
+  features to train a classifier to predict direction.
+  """
+
+  def __init__(
+      self,
+      regression,
+      classifier,
+      verbose=False):
+    self.regression = regression
+    self.classifier = classifier
+    self.verbose = verbose
+
+  def fit(self, X, y):
+    #
+    # Fit the regression to the values and the confidences
+    self.regression.fit(X, y.iloc[:, :2])
+    #
+    # augment the features with the regression predictions of values and confidences
+    X_aug, pred_values, pred_confs = self._augment_X(X)
+    #
+    # fit the classifier to the class with the augmented features
+    self.classifier.fit(X_aug, y.iloc[:, 2:])
+
+  def _augment_X(self, X):
+    #
+    # get the predicted values and confidences
+    pred_values, pred_confs = self._regression_predict(X)
+    #
+    # augment the features with the predictions
+    return (
+        np.concatenate(
+          (X, np.expand_dims(pred_values, axis=1), np.expand_dims(pred_confs, axis=1)),
+          axis=1),
+        pred_values,
+        pred_confs)
+
+  def _regression_predict(self, X):
+    pred_values = self.regression.model_value.predict(X)
+    pred_confs = self.regression.model_conf.predict(X)
+    return pred_values, pred_confs
+
+  def predicted_columns(self):
+    return ['PredValue', 'PredConfidence', 'PredClass', 'NegativeProb', 'UncalledProb', 'PositiveProb']
+
+  def predict(self, X, index):
+    #
+    # augment the features with the regression predictions of values and confidences
+    X_aug, pred_values, pred_confs = self._augment_X(X)
+    pred_class = self.classifier.model.predict(X_aug)
+    pred_classprobs = self.classifier.model.predict_proba(X_aug)
+    return pd.DataFrame({
+        'PredValue': pred_values,
+        'PredConfidence': pred_confs,
+        'PredClass': pred_class,
+        'NegativeProb': pred_classprobs[:, 0],
+        'UncalledProb': pred_classprobs[:, 1],
+        'PositiveProb': pred_classprobs[:, 2],
+      },
+      index=index)
+
+  def get_features(self, df, elem=None):
+    return self.regression.get_features(df, elem)
+
+  def get_response(self, df):
+    return df[['Value', 'Confidence', 'class']]
+
+  @staticmethod
+  def make_submission(preds):
+    """
+    Take the output from this model and call variants.
+
+    I.e. estimate each variant's direction, probability of
+    correct direction estimation, confidence score and s.e.
+    of the confidence score.
+    """
+    N = preds.shape[0]
+    preds['Direction'] = preds['PredClass']
+    #
+    # Which samples were classified into each class?
+    pred_negative = preds['Direction'] == -1
+    pred_uncalled = preds['Direction'] ==  0
+    pred_positive = preds['Direction'] ==  1
+    #
+    # Collate the probabilities that the class predictions are correct
+    p_direction = np.zeros(N)
+    p_direction[pred_negative] = preds.loc[pred_negative, 'NegativeProb']
+    p_direction[pred_uncalled] = preds.loc[pred_uncalled, 'UncalledProb']
+    p_direction[pred_positive] = preds.loc[pred_positive, 'PositiveProb']
+    assert np.all(p_direction > .33)  # Check our classifier chose a popular class
+    preds['P_Direction'] = p_direction
+    # Use the predicted confidences
+    preds['Confidence'] = np.clip(preds['PredConfidence'], 1e-5, 1 - 1e-5)
+    # Use any old standard error - not sure how to estimate this without an ensemble.
+    preds['SE'] = .1
+    return preds
+
+
+
+
 def linear_scale(x, lower=0, upper=1):
   """
   Transform x linearly into the range [lower, upper]
