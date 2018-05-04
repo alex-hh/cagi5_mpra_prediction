@@ -1,0 +1,77 @@
+\documentclass{article}
+
+% General document formatting
+\usepackage{url}
+% \usepackage[margin=0.7in]{geometry}
+% \usepackage[parfill]{parskip}
+% \usepackage[utf8]{inputenc}
+
+% Related to math
+\usepackage{amsmath,amssymb,amsfonts,amsthm}
+
+\begin{document}
+
+All code to reproduce the submitted results is available in a git
+repository~\url{git@bitbucket.org:alex-hh/cagimpra.git} which can be made
+available on request.
+
+
+\section*{Features}
+
+We tested different types of feature to assess their predictive power.
+
+
+\subsection*{Conservation}
+
+We used \emph{phyloP}, \emph{phastCons}, \emph{GerpN} and \emph{GerpRS}
+base-pair resolved conservation scores.
+
+
+\subsection*{DNase hypersensitivity}
+
+For each regulatory element we identified the closest matching ENCODE cell type
+for which there is a DNase-hypersensitivity track. We downloaded the tracks and
+created 41-dimensional features consisting of the signal at each base-pair
+flanked by the signal at the bases 20bp on either side.
+
+
+\subsection*{DeepSea neural networks}
+
+We trained several different neural network architectures on the genomic
+prediction benchmark detailed in the original DeepSea paper. We evaluated these
+networks on a region surrounding each variant twice, once with the reference
+allele and once with the alternate allele. Features were generated as the
+difference in activations between the two evaluations of internal and output
+layers of the networks.
+
+
+\subsection*{Region identity}
+
+We one-hot encoded the identity of region to use as a feature.
+
+
+\subsection*{Substitution}
+
+We one-hot encoded the reference to alternate allele substitution as a feature.
+
+
+\section*{Inference}
+
+We used three different gradient boosting algorithms: \emph{XGBoost},
+\emph{CatBoost} and \emph{LightGBM}. We used the gradient boosting algorithms
+to regress the \texttt{Value} and \texttt{Confidence}, we also used them as
+classifers to predict the \texttt{Direction}. We tested different subsets of
+Features in a 5-fold cross-validation set up to identify the best features.
+Models were assessed by the cross-validated one against many
+area-under-precision-recall-curve (AUPRC). We stacked models in that we used
+the prediction of cross-validated regression models of the \texttt{Value} and
+\texttt{Confidence} as features in the classification model for the
+\texttt{Direction}.
+
+To estimate the standard error of the \texttt{Confidence} we trained an
+ensemble of regression models and used the standard deviation of the
+predictions to estimate the standard error.
+
+
+
+\end{document}
