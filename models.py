@@ -157,10 +157,10 @@ class Regression(object):
     return preds
 
 
-class StackedRegressionClassifier(object):
+class RegressionClassifier(object):
   """
-  Fits regression models to Value and Confidence. Stacks these predictions with
-  features to train a classifier to predict direction.
+  Fits regression models to Value and Confidence and a classifier
+  for Direction.
   """
 
   def __init__(
@@ -177,11 +177,8 @@ class StackedRegressionClassifier(object):
     # Fit the regression to the values and the confidences
     self.regression.fit(X, y.iloc[:, :2])
     #
-    # augment the features with the regression predictions of values and confidences
-    X_aug, pred_values, pred_confs = self._augment_X(X)
-    #
     # fit the classifier to the class with the augmented features
-    self.classifier.fit(X_aug, y.iloc[:, 2:])
+    self.classifier.fit(X, y.iloc[:, 2:])
 
   def _augment_X(self, X):
     #
@@ -207,9 +204,9 @@ class StackedRegressionClassifier(object):
   def predict(self, X, index):
     #
     # augment the features with the regression predictions of values and confidences
-    X_aug, pred_values, pred_confs = self._augment_X(X)
-    pred_class = self.classifier.model.predict(X_aug)
-    pred_classprobs = self.classifier.model.predict_proba(X_aug)
+    pred_values, pred_confs = self._regression_predict(X)
+    pred_class = self.classifier.model.predict(X)
+    pred_classprobs = self.classifier.model.predict_proba(X)
     return pd.DataFrame({
         'PredValue': pred_values,
         'PredConfidence': pred_confs,
