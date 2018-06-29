@@ -1,0 +1,66 @@
+\documentclass{article}
+
+% General document formatting
+\usepackage{url}
+% \usepackage[margin=0.7in]{geometry}
+% \usepackage[parfill]{parskip}
+% \usepackage[utf8]{inputenc}
+
+% Related to math
+\usepackage{amsmath,amssymb,amsfonts,amsthm}
+
+\begin{document}
+
+\section*{Differences between submissions}
+
+I had little time to validate my method so I really just used the 7 submissions
+to randomly tweak some features and parameters.  I had several different
+features derived from neural networks that I felt were important so I tried
+several of these. I didn't have time to play with the gradient boosting machine
+parameters much so I just tried a few different options.  Each submission was
+identical to the previous one excepting the details noted below.
+
+\subsection*{Submission 1}
+
+Submission 1 used features derived from the original DeepSea network, DNase,
+conservation and stacked \texttt{Value} and \texttt{Confidence} predictions.
+
+
+\subsection*{Submission 2}
+
+Submission 2 replaced the original DeepSea network features with features
+derived from a network learned by Daniel Quang on the same task.
+
+
+\subsection*{Submission 3}
+
+Submission 3 replaced the Daniel Quang network features with features derived
+from a network learned by ourselves on the same task.
+
+
+\subsection*{Submission 4}
+
+Submission 4 changed the parameters for the gradient boosting machine.  We used
+Bayesian optimisation to determine these.
+
+
+\subsection*{Submission 5}
+
+Submission 5 retained the new gradient boosting machine parameters but went
+back to using the original DeepSea features.
+
+
+\subsection*{Submission 6}
+
+Submission 6 changed the \texttt{max\_depth} gradient boosting machine parameter
+to 9.
+
+
+\subsection*{Submission 7}
+
+Submission 7 went back to using the original gradient boosting machine parameters
+but keeping \texttt{max\_depth} at 9.
+
+
+
+\end{document}
