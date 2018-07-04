@@ -1,0 +1,137 @@
+\documentclass{article}
+
+\usepackage{polyglossia}
+\setdefaultlanguage[variant=british]{english}
+\usepackage{csquotes}
+
+% General document formatting
+\usepackage{url}
+% \usepackage[margin=0.7in]{geometry}
+% \usepackage[parfill]{parskip}
+% \usepackage[utf8]{inputenc}
+
+% Related to math
+\usepackage{amsmath,amssymb,amsfonts,amsthm}
+
+\usepackage[
+    backend=biber,
+    % doi=false,
+    isbn=false,
+    url=false,
+    % style=apa,
+    % style=humanmutation,
+    sorting=none,
+    natbib=true,
+  ]{biblatex}
+\bibliography{CAGI5-reg-sat} % or
+% \addbibresource{<database>.<extension>}
+
+
+
+\begin{document}
+
+We were inspired by Zeng et al.'s winning
+method~\cite{ZengAccurateeQTLprioritization2017} from the CAGI~4
+challenge~\citep{KreimerPredictinggeneexpression2017}.
+
+All code to reproduce the submitted results is available in a git
+repository~\url{git@bitbucket.org:alex-hh/cagimpra.git} which can be made
+available on request.
+
+
+\section*{Features}
+
+We tested different types of feature to assess their predictive power.
+
+
+\subsection*{Conservation}
+
+We used \emph{phyloP}~\cite{PollardDetectionnonneutralsubstitution2010},
+\emph{phastCons}~\cite{SiepelEvolutionarilyconservedelements2005}, \emph{GerpN}
+and \emph{GerpRS}~\cite{CooperDistributionintensityconstraint2005a} base-pair
+resolved conservation scores.
+
+Downloaded from UCSC~\cite{KuhnUCSCgenomebrowser2013}?
+
+
+\subsection*{DNase hypersensitivity}
+
+For each regulatory element we identified the closest matching
+ENCODE~\cite{DunhamintegratedencyclopediaDNA2012} cell type for which there is
+a DNase-hypersensitivity track (see Table~\ref{tab:encode-dnase}). We
+downloaded the tracks~\cite{RosenbloomENCODEDataUCSC2012} and created
+41-dimensional features consisting of the signal at each base-pair flanked by
+the signal at the bases 20bp on either side.
+
+\begin{table}[htp]
+\resizebox{\textwidth}{!} {
+\begin{tabular}{rll}
+  \\
+  cell line  & ENCODE    & UCSC track \\
+  \hline
+  HepG2      & HepG2     & wgEncodeOpenChromDnaseHepg2BaseOverlapSignal \\
+  HEL 92.1.7 & GM12878   & wgEncodeOpenChromDnaseGm12878BaseOverlapSignal \\
+  HEK293T    & HEK293T   & wgEncodeOpenChromDnaseHek293tBaseOverlapSignal \\
+  K562       & K562      & wgEncodeOpenChromDnaseK562BaseOverlapSignalV2 \\
+  GBM        & Gliobla   & wgEncodeOpenChromDnaseGlioblaBaseOverlapSignal \\
+  SK-MEL-28  & Colo829   & wgEncodeOpenChromDnaseColo829BaseOverlapSignal \\
+  HaCaT      & NHEK      & wgEncodeOpenChromDnaseNhekBaseOverlapSignal \\
+  MIN6       & PanIslets & wgEncodeOpenChromDnasePanisletsBaseOverlapSignal
+\end{tabular}
+}
+\caption{The ENCODE cell lines that were identified as the closest
+matches to the cell lines in the challenge. The corresponding UCSC track
+names are also given.}
+\label{tab:encode-dnase}
+\end{table}
+
+
+\subsection*{DeepSea neural networks}
+
+We trained several different neural network architectures on the genomic
+prediction benchmark detailed in the original DeepSea
+paper~\cite{ZhouPredictingeffectsnoncoding2015}. We evaluated these networks on
+a region surrounding each variant twice, once with the reference allele and
+once with the alternate allele. Features were generated as the difference in
+activations between the two evaluations of internal and output layers of the
+networks.
+
+DanQ network~\cite{QuangDanQhybridconvolutional2016}.
+
+
+\subsection*{Region identity}
+
+We one-hot encoded the identity of region to use as a feature.
+
+
+\subsection*{Substitution}
+
+We one-hot encoded the reference to alternate allele substitution as a feature.
+
+
+\section*{Inference}
+
+We used three different gradient boosting algorithms:
+\emph{XGBoost}~\cite{ChenXGBoostScalableTree2016}, \emph{CatBoost} and
+\emph{LightGBM}. We used the gradient boosting algorithms to regress the
+\texttt{Value} and \texttt{Confidence}, we also used them as classifers to
+predict the \texttt{Direction}. We tested different subsets of Features in a
+5-fold cross-validation set up to identify the best features.  Models were
+assessed by the cross-validated one against many
+area-under-precision-recall-curve (AUPRC). We stacked models in that we used
+the prediction of cross-validated regression models of the \texttt{Value} and
+\texttt{Confidence} as features in the classification model for the
+\texttt{Direction}.
+
+To estimate the standard error of the \texttt{Confidence} we trained an
+ensemble of regression models and used the standard deviation of the
+predictions to estimate the standard error.
+
+
+
+%
+% Bibliography
+%
+\printbibliography
+
+\end{document}
