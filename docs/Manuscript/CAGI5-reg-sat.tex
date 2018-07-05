@@ -7,6 +7,7 @@
 \setdefaultlanguage[variant=british]{english}
 \usepackage{csquotes}
 
+
 %
 % General document formatting
 %
@@ -16,16 +17,20 @@
 % \usepackage[parfill]{parskip}
 % \usepackage[utf8]{inputenc}  % Not needed under xelatex
 
+
 %
 % Related to math
 %
 \usepackage{amsmath,amssymb,amsfonts,amsthm}
+
 
 %
 % Change tracking
 %
 \usepackage{changes}
 \definechangesauthor[name={John Reid}, color=orange]{JR}
+\newcommand{\jr}[1]{\added[id=JR]{[#1]}}
+
 
 %
 % Bibliography
@@ -50,15 +55,28 @@
 \newcommand{\todo}[1]{\textcolor{red}{TODO: #1}}
 
 
+%
+% Authorship and title
+%
+\author{
+  Alex Hawkins-Hooker \\
+  \texttt{first2.last2@xxxxx.com}
+  \and
+  Henry Kenlay \\
+  \texttt{first2.last2@xxxxx.com}
+  \and
+  John E. Reid \\
+  \texttt{johnbaronreid@gmail.com}
+}
+\title{A method for the CAGI 5 regulation saturation challenge}
+
+
 \begin{document}
 
-We were inspired by Zeng et al.'s winning
-method~\cite{ZengAccurateeQTLprioritization2017} from the CAGI~4
-challenge~\citep{KreimerPredictinggeneexpression2017}.
+\maketitle
 
-All code to reproduce the submitted results is available in a git
-repository~\url{git@bitbucket.org:alex-hh/cagimpra.git} which can be made
-available on request.
+
+\todo{Any suggestions for catchy names for our method (acronyms or otherwise)?}
 
 
 \section*{Introduction}
@@ -68,26 +86,61 @@ available on request.
 
 \subsection*{Existing/similar methods}
 
+
 \subsection*{Data}
 
-\todo{Describe training and test data.}
+17,500 SNVs in five enhancers and nine promoters (collectively \emph{regulatory
+elements}) were assayed in a saturation mutagenesis massively parallel reporter
+assay (MPRA). A linear regression model was fit to the data. This resulted in a
+\texttt{Confidence} score (a function of the associated $p$-value) and
+\texttt{Value} score for each SNV. Briefly, the \texttt{Confidence} represents
+how sure we are that the SNV has an effect on gene expression and the
+\texttt{Value} represents the direction and magnitude (positive for activating,
+negative for repressing) of the effect (see Figures~\ref{fig:conf-value}
+and~\ref{fig:training-sort1}). The SNVs were classified into three classes: if
+the \texttt{Confidence} is less than .1, the \texttt{Direction} is 0; otherwise
+the \texttt{Direction} is 1 (resp. -1) if \texttt{Value} $\ge 0$ (resp. $< 0$).
 
-\begin{figure}
+\begin{figure}[ht]
 \includegraphics[width=\textwidth]{fig-conf-value-scatter}
 \caption{Scatter plot of the confidence and value scores in the training data coloured
 by regulatory element and cell line.}
 \label{fig:conf-value}
 \end{figure}
 
-\begin{figure}
+\begin{figure}[ht]
 \includegraphics[width=\textwidth]{fig-value-conf-SORT1}
 \caption{Training data for the SORT1 regulatory element.}
 \label{fig:training-sort1}
 \end{figure}
 
+One regulatory element, \texttt{TERT}, was assayed in two cell lines. We
+distinguish these experiments by \texttt{TERT-GBM} and \texttt{TERT-HEK293T}.
+
+
+\subsection*{Prediction task}
+
+The data was split 25\% - 75\% into training and test data. Note that the
+training data was chosen to form contiguous chunks (see
+Figure~\ref{fig:training-sort1}).  The challenge required the participating
+teams to enter a prediction for each SNV in the test data. Each prediction
+consisted of:
+\begin{itemize}
+  \item A categorical prediction of the \texttt{Direction} of the effect (-1, 0 or 1).
+  \item The probability of correctly assigning the predicted \texttt{Direction},
+    that is a measure of confidence in the prediction.
+  \item A prediction of the \texttt{Confidence}.
+  \item The standard error of the predicted \texttt{Confidence}.
+\end{itemize}
+The assessment statistics were loosely hinted at in the challenge description
+but were far from well-defined.
 
 
 \section*{Methods}
+
+We were inspired by Zeng et al.'s winning
+method~\cite{ZengAccurateeQTLprioritization2017} from the CAGI~4
+challenge~\citep{KreimerPredictinggeneexpression2017}.
 
 
 \subsection*{Features}
@@ -102,7 +155,8 @@ We used \emph{phyloP}~\cite{PollardDetectionnonneutralsubstitution2010},
 and \emph{GerpRS}~\cite{CooperDistributionintensityconstraint2005a} base-pair
 resolved conservation scores.
 
-Downloaded from UCSC~\cite{KuhnUCSCgenomebrowser2013}?
+Downloaded from UCSC~\cite{KuhnUCSCgenomebrowser2013}? \jr{AHH: can you check
+where this came from?}
 
 
 \subsubsection*{DNase hypersensitivity}
@@ -149,6 +203,9 @@ networks.
 
 DanQ network~\cite{QuangDanQhybridconvolutional2016}.
 
+\jr{AHH: We need some more details here. If I let you know which network features I used,
+can you fill in the details of the network architectures and training?}
+
 
 \subsubsection*{Region identity}
 
@@ -162,11 +219,12 @@ We one-hot encoded the reference to alternate allele substitution as a feature.
 
 \subsubsection*{Stacked predictions}
 
-We generated features representing the \texttt{Value} and \texttt{Confidence}
-by fitting models to held out data. For the submissions, the held out data was
-the training data. For the cross-validation, the held out data was the training
-folds. We used the DeepSea difference features, DNase features and conservation
-features to fit the models.
+We generated features estimating the \texttt{Value} and \texttt{Confidence} by
+fitting models to held out data. For the test SNVs, the held out data was the
+training data. During cross-validation, features for the validation SNVs' were
+estimated using the training folds as the held out data. We used the DeepSea
+difference features, DNase features and conservation features to fit the
+gradient boosting models estimating these generated features.
 
 \begin{figure}
 \includegraphics[width=\textwidth]{fig-stacking-x-validation}
@@ -200,9 +258,28 @@ used the prediction of cross-validated regression models of the \texttt{Value}
 and \texttt{Confidence} as features in the classification model for the
 \texttt{Direction}.
 
+
 \subsubsection*{Cross-validation}
 
-\todo{Describe cross-validation scheme respecting structure of training loci}
+We used a custom cross-validation configuration to investigate different models
+and hyper-parameters.  The spatial dependence of the \texttt{Value} in each
+regulatory element would clearly break the independence assumption in a naive
+5-fold cross-validation.  Therefore we choose to perform 5-fold
+cross-validation that retained spatial dependencies. Briefly, we defined chunks
+as maximal contiguous regions in the training data for each regulatory element.
+
+As the validation metrics for the challenge were ill-defined and the challenge
+requires several predictions for each SNV across 3 categorical outcomes, we
+chose to use a simplified task to evaluate models and hyperparameters. We used
+the absolute predicted \texttt{Value} as a predictor of the absolute
+\texttt{Direction}.  This is a binary classification task and permits analysis
+by receiver operating characteristic (ROC) and precision-recall (PR) curves. We
+used the area under the precision-recall curve (AUPRC) as our primary
+evaluation criteria when performing cross-validation. We also calculated the
+area under the ROC curve (AUROC) as a statistic of interest.
+
+\todo{Precisely describe cross-validation scheme respecting structure of
+training loci.}
 
 
 
@@ -229,6 +306,10 @@ HK, AHH and JR developed the deep convolutional neural network models of
 genomic sequence. AHH and JR derived the features required for this
 project. AHH and JR fit the gradient boosting machines. JR wrote the
 manuscript.
+
+All code to reproduce the submitted results is available in a git
+repository~\url{git@bitbucket.org:alex-hh/cagimpra.git} which can be made
+available on request.
 
 
 \subsection*{Acknowledgements}
