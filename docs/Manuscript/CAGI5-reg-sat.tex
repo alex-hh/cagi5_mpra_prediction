@@ -1,18 +1,35 @@
 \documentclass{article}
 
+%
+% Hyphenation etc...
+%
 \usepackage{polyglossia}
 \setdefaultlanguage[variant=british]{english}
 \usepackage{csquotes}
 
+%
 % General document formatting
+%
 \usepackage{url}
+\usepackage{xcolor}
 % \usepackage[margin=0.7in]{geometry}
 % \usepackage[parfill]{parskip}
-% \usepackage[utf8]{inputenc}
+% \usepackage[utf8]{inputenc}  % Not needed under xelatex
 
+%
 % Related to math
+%
 \usepackage{amsmath,amssymb,amsfonts,amsthm}
 
+%
+% Change tracking
+%
+\usepackage{changes}
+\definechangesauthor[name={John Reid}, color=orange]{JR}
+
+%
+% Bibliography
+%
 \usepackage[
     backend=biber,
     % doi=false,
@@ -27,6 +44,11 @@
 % \addbibresource{<database>.<extension>}
 
 
+%
+% Command definitions
+%
+\newcommand{\todo}[1]{\textcolor{red}{TODO: #1}}
+
 
 \begin{document}
 
@@ -39,12 +61,41 @@ repository~\url{git@bitbucket.org:alex-hh/cagimpra.git} which can be made
 available on request.
 
 
-\section*{Features}
+\section*{Introduction}
+
+\subsection*{Biological context}
+
+
+\subsection*{Existing/similar methods}
+
+\subsection*{Data}
+
+\todo{Describe training and test data.}
+
+\begin{figure}
+\includegraphics[width=\textwidth]{fig-conf-value-scatter}
+\caption{Scatter plot of the confidence and value scores in the training data coloured
+by regulatory element and cell line.}
+\label{fig:conf-value}
+\end{figure}
+
+\begin{figure}
+\includegraphics[width=\textwidth]{fig-value-conf-SORT1}
+\caption{Training data for the SORT1 regulatory element.}
+\label{fig:training-sort1}
+\end{figure}
+
+
+
+\section*{Methods}
+
+
+\subsection*{Features}
 
 We tested different types of feature to assess their predictive power.
 
 
-\subsection*{Conservation}
+\subsubsection*{Conservation}
 
 We used \emph{phyloP}~\cite{PollardDetectionnonneutralsubstitution2010},
 \emph{phastCons}~\cite{SiepelEvolutionarilyconservedelements2005}, \emph{GerpN}
@@ -54,11 +105,11 @@ resolved conservation scores.
 Downloaded from UCSC~\cite{KuhnUCSCgenomebrowser2013}?
 
 
-\subsection*{DNase hypersensitivity}
+\subsubsection*{DNase hypersensitivity}
 
 For each regulatory element we identified the closest matching
 ENCODE~\cite{DunhamintegratedencyclopediaDNA2012} cell type for which there is
-a DNase-hypersensitivity track (see Table~\ref{tab:encode-dnase}). We
+a DNase-hypersensitivity track (see Table~\ref{tab:encode-cell-types}). We
 downloaded the tracks~\cite{RosenbloomENCODEDataUCSC2012} and created
 41-dimensional features consisting of the signal at each base-pair flanked by
 the signal at the bases 20bp on either side.
@@ -82,11 +133,11 @@ the signal at the bases 20bp on either side.
 \caption{The ENCODE cell lines that were identified as the closest
 matches to the cell lines in the challenge. The corresponding UCSC track
 names are also given.}
-\label{tab:encode-dnase}
+\label{tab:encode-cell-types}
 \end{table}
 
 
-\subsection*{DeepSea neural networks}
+\subsubsection*{DeepSea neural networks}
 
 We trained several different neural network architectures on the genomic
 prediction benchmark detailed in the original DeepSea
@@ -99,17 +150,42 @@ networks.
 DanQ network~\cite{QuangDanQhybridconvolutional2016}.
 
 
-\subsection*{Region identity}
+\subsubsection*{Region identity}
 
 We one-hot encoded the identity of region to use as a feature.
 
 
-\subsection*{Substitution}
+\subsubsection*{Substitution}
 
 We one-hot encoded the reference to alternate allele substitution as a feature.
 
 
-\section*{Inference}
+\subsubsection*{Stacked predictions}
+
+We generated features representing the \texttt{Value} and \texttt{Confidence}
+by fitting models to held out data. For the submissions, the held out data was
+the training data. For the cross-validation, the held out data was the training
+folds. We used the DeepSea difference features, DNase features and conservation
+features to fit the models.
+
+\begin{figure}
+\includegraphics[width=\textwidth]{fig-stacking-x-validation}
+\caption{Predictions used for stacking coloured by regulatory element.
+  \emph{Top left}: Overall and regulatory element specific AUROC for prediction
+  of \texttt{Direction} using \texttt{Value}.
+  \emph{Top right}: Overall and regulatory element specific AUPRC for prediction
+  of \texttt{Direction} using \texttt{Value}.
+  \emph{Bottom left}: Predicted \texttt{Value} against actual \texttt{Value}.
+  \emph{Bottom right}: Predicted \texttt{Confidence} against actual \texttt{Confidence}.
+}
+\label{fig:stacking}
+\end{figure}
+
+
+\subsection*{Inference}
+
+
+\subsubsection*{Models}
 
 We used three different gradient boosting algorithms:
 \emph{XGBoost}~\cite{ChenXGBoostScalableTree2016},
@@ -124,12 +200,38 @@ used the prediction of cross-validated regression models of the \texttt{Value}
 and \texttt{Confidence} as features in the classification model for the
 \texttt{Direction}.
 
+\subsubsection*{Cross-validation}
+
+\todo{Describe cross-validation scheme respecting structure of training loci}
+
+
+
+\subsubsection*{Hyper-parameter Bayesian optimisation}
+
+\todo{Describe Bayesian optimisation scheme}
+
+
+\subsubsection*{Confidence standard error}
+
 To estimate the standard error of the \texttt{Confidence} we trained an
 ensemble of regression models and used the standard deviation of the
 predictions to estimate the standard error.
 
 
-\section*{Acknowledgements}
+\subsection*{Variable importance}
+
+\todo{Discuss which features were important for prediction.}
+
+
+\section*{Contributions}
+
+HK, AHH and JR developed the deep convolutional neural network models of
+genomic sequence. AHH and JR derived the features required for this
+project. AHH and JR fit the gradient boosting machines. JR wrote the
+manuscript.
+
+
+\subsection*{Acknowledgements}
 
 We would like to thank Elena Vigorito, Lorenz Wernisch, Paul Newcombe, and Paul
 Kirk for insightful comments on parts of this work.

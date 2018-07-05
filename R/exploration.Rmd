@@ -39,10 +39,11 @@ suppressPackageStartupMessages({
   library(ggthemes)
   library(scales)
 })
-theme_set(theme_few())
+theme_set(theme_tufte())
 scale_colour_discrete <- scale_colour_few
 scale_fill_discrete <- scale_fill_few
-dir.create('../plots', showWarnings = FALSE)
+plotdir <- file.path('..', 'plots')
+dir.create(plotdir, showWarnings = FALSE)
 ```
 
 
@@ -109,7 +110,8 @@ plot_element <- function(.df) {
     geom_hline(yintercept = 0, alpha = .3) +
     geom_point() +
     # geom_smooth(aes(y = abs(Value))) +
-    scale_colour_gradient(limits = c(0, 1), low = muted('blue'), high = muted('red'))
+    scale_colour_gradient(
+        limits = c(0, 1), low = muted('blue'), high = muted('red'))
 
 }
 plot_element_gviz <- function(gr) {
@@ -128,6 +130,9 @@ for (elem in elements) {
   print(elem)
   print(element_dfs[[elem]]$chrom[1])
   print(plot_element(element_dfs[[elem]]))
+  ggsave(
+      file.path(plotdir, str_c('value-conf-', elem, '.pdf')),
+      width = 8, height = 6, units = 'in')
   # plot_element_gviz(element_grs[[elem]]))
 }
 ```
@@ -164,6 +169,9 @@ We plot the confidence against the value. Some high absolute values have low con
 ggplot(training_df, aes(x = Value, y = Confidence, colour = elem)) +
   geom_point(alpha = .3) +
   scale_colour_pander()
+ggsave(
+    file.path(plotdir, 'conf-value-scatter.pdf'),
+    width = 8, height = 6, units = 'in')
 ```
 
 
@@ -209,7 +217,9 @@ ggplot(
     aes(x = dist_factor, y = MaxAbsValue2, fill = HighValue1)) +
   geom_boxplot() +
   facet_wrap(~ elem)
-ggsave('../plots/spatial.pdf', width = 16, height = 12, units = 'in')
+ggsave(
+    file.path(plotdir, 'spatial.pdf'),
+    width = 16, height = 12, units = 'in')
 ```
 
 
