@@ -58,16 +58,16 @@
 %
 % Authorship and title
 %
-\author{
-  Alex Hawkins-Hooker \\
-  \texttt{first2.last2@xxxxx.com}
-  \and
-  Henry Kenlay \\
-  \texttt{first2.last2@xxxxx.com}
-  \and
-  John E. Reid \\
-  \texttt{johnbaronreid@gmail.com}
-}
+\usepackage{authblk}
+
+\author[1]{Alex Hawkins-Hooker}
+\author[2]{Henry Kenlay}
+\author[3, 4]{John E. Reid}
+\affil[1]{\footnotesize \todo{add}}
+\affil[2]{\footnotesize \todo{add}}
+\affil[3]{\footnotesize MRC Biostatistics Unit, University of Cambridge, Cambridge, UK}
+\affil[4]{\footnotesize Alan Turing Institute, British Library, London, UK}
+
 \title{A method for the CAGI 5 regulation saturation challenge}
 
 
@@ -82,6 +82,15 @@
 \section*{Introduction}
 
 \subsection*{Biological context}
+
+GWAS. Most variants noncoding. Identify causal variants and mechanism. eQTL for
+fine-mapping. SNP linkage remains a problem.
+
+MPRA are high-throughput assay to investigate internals of regulatory elements.
+Describe protocol.
+
+We describe our method to estimate SNV effect sizes, trained on MPRA data. CAGI
+5 challenge.
 
 
 \subsection*{Existing/similar methods}
@@ -150,9 +159,9 @@ We tested different types of feature to assess their predictive power.
 
 \subsubsection*{Conservation}
 
-We used \emph{phyloP}~\cite{PollardDetectionnonneutralsubstitution2010},
-\emph{phastCons}~\cite{SiepelEvolutionarilyconservedelements2005}, \emph{GerpN}
-and \emph{GerpRS}~\cite{CooperDistributionintensityconstraint2005a} base-pair
+We used phyloP~\cite{PollardDetectionnonneutralsubstitution2010},
+phastCons~\cite{SiepelEvolutionarilyconservedelements2005}, GerpN
+and GerpRS~\cite{CooperDistributionintensityconstraint2005} base-pair
 resolved conservation scores.
 
 Downloaded from UCSC~\cite{KuhnUCSCgenomebrowser2013}? \jr{AHH: can you check
@@ -246,16 +255,16 @@ gradient boosting models estimating these generated features.
 \subsubsection*{Models}
 
 We used three different gradient boosting algorithms:
-\emph{XGBoost}~\cite{ChenXGBoostScalableTree2016},
-\emph{CatBoost}~\cite{ProkhorenkovaCatBoostunbiasedboosting2017} and
-\emph{LightGBM}~\cite{KeLightGBMHighlyEfficient2017}. We used the gradient
-boosting algorithms to regress the \texttt{Value} and \texttt{Confidence}, we
-also used them as classifers to predict the \texttt{Direction}. We tested
-different subsets of features in a 5-fold cross-validation set up to identify
-the best features.  Models were assessed by the cross-validated one against
-many area-under-precision-recall-curve (AUPRC). We stacked models in that we
-used the prediction of cross-validated regression models of the \texttt{Value}
-and \texttt{Confidence} as features in the classification model for the
+XGBoost~\cite{ChenXGBoostScalableTree2016},
+CatBoost~\cite{ProkhorenkovaCatBoostunbiasedboosting2017} and
+LightGBM~\cite{KeLightGBMHighlyEfficient2017}. We used the gradient boosting
+algorithms to regress the \texttt{Value} and \texttt{Confidence}, we also used
+them as classifers to predict the \texttt{Direction}. We tested different
+subsets of features in a 5-fold cross-validation set up to identify the best
+features.  Models were assessed by the cross-validated one against many
+area-under-precision-recall-curve (AUPRC). We stacked models in that we used
+the prediction of cross-validated regression models of the \texttt{Value} and
+\texttt{Confidence} as features in the classification model for the
 \texttt{Direction}.
 
 
@@ -300,6 +309,17 @@ predictions to estimate the standard error.
 \todo{Discuss which features were important for prediction.}
 
 
+\section*{Discussion}
+
+\todo{Discuss why neural network features work so well}
+
+\todo{Discuss how good results are}
+
+\todo{Which regulatory elements were easier/harder?}
+
+\todo{Future work/extensions}
+
+
 \section*{Contributions}
 
 HK, AHH and JR developed the deep convolutional neural network models of
@@ -314,8 +334,14 @@ available on request.
 
 \subsection*{Acknowledgements}
 
-We would like to thank Elena Vigorito, Lorenz Wernisch, Paul Newcombe, and Paul
-Kirk for insightful comments on parts of this work.
+We are grateful to the organizers of the CAGI 5 experiment for running the
+regulation saturation challenge. We thank Martin Kircher, Fumitaka Inoue,
+Chenling Xiong, Beth Martin, Nadav Ahituv, and Jay Shendure for providing the
+MPRA data for this challenge. We also thank members of the MRC Biostatistics
+Unit for providing helpful feedback on the method, in particular Elena
+Vigorito, Lorenz Wernisch, Paul Newcombe, and Paul Kirk gave insightful
+comments on parts of this work.
+
 
 %
 % Bibliography
