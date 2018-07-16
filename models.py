@@ -236,21 +236,28 @@ class RegressionClassifier(object):
     preds['Direction'] = preds['PredClass']
     #
     # Which samples were classified into each class?
-    pred_negative = preds['Direction'] == -1
-    pred_uncalled = preds['Direction'] ==  0
-    pred_positive = preds['Direction'] ==  1
+    neg_idx = preds['Direction'] == -1
+    unc_idx = preds['Direction'] ==  0
+    pos_idx = preds['Direction'] ==  1
     #
     # Collate the probabilities that the class predictions are correct
     p_direction = np.zeros(N)
-    p_direction[pred_negative] = preds.loc[pred_negative, 'NegativeProb']
-    p_direction[pred_uncalled] = preds.loc[pred_uncalled, 'UncalledProb']
-    p_direction[pred_positive] = preds.loc[pred_positive, 'PositiveProb']
+    p_direction[neg_idx] = preds.loc[neg_idx, 'NegativeProb']
+    p_direction[unc_idx] = preds.loc[unc_idx, 'UncalledProb']
+    p_direction[pos_idx] = preds.loc[pos_idx, 'PositiveProb']
     assert np.all(p_direction > .33)  # Check our classifier chose a popular class
     preds['P_Direction'] = p_direction
     # Use the predicted confidences
     preds['Confidence'] = np.clip(preds['PredConfidence'], 1e-5, 1 - 1e-5)
     # Use any old standard error - not sure how to estimate this without an ensemble.
     preds['SE'] = .1
+    #
+    # Calculate continuous scores
+    predictions['ContinuousScore'] = np.inf
+    predictions.loc[neg_idx, 'ContinuousScore'] = - 2 / 3 - predictions.loc[neg_idx, 'NegativeProb']
+    predictions.loc[unc_idx, 'ContinuousScore'] = \
+        3 / 2 * (predictions.loc[unc_idx, 'PositiveProb'] - predictions.loc[unc_idx, 'NegativeProb'])
+    predictions.loc[pos_idx, 'ContinuousScore'] = 2 / 3  + predictions.loc[pos_idx, 'PositiveProb']
     return preds
 
 
