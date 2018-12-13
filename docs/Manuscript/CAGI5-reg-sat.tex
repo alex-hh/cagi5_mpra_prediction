@@ -1,5 +1,6 @@
 \documentclass{article}
 
+
 %
 % Hyphenation etc...
 %
@@ -13,6 +14,8 @@
 %
 \usepackage{url}
 \usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{booktabs}
 % \usepackage[margin=0.7in]{geometry}
 % \usepackage[parfill]{parskip}
 % \usepackage[utf8]{inputenc}  % Not needed under xelatex
@@ -52,7 +55,7 @@
 %
 % Command definitions
 %
-\newcommand{\todo}[1]{\textcolor{red}{TODO: #1}}
+\newcommand{\todo}[1]{\textcolor{red}{TODO\@: #1}}
 
 
 %
@@ -83,7 +86,7 @@
 
 \subsection*{Biological context}
 
-GWAS. Most variants noncoding. Identify causal variants and mechanism. eQTL for
+GWAS\@. Most variants noncoding. Identify causal variants and mechanism.\ eQTL for
 fine-mapping. SNP linkage remains a problem.
 
 MPRA are high-throughput assay to investigate internals of regulatory elements.
@@ -102,12 +105,12 @@ We describe our method to estimate SNV effect sizes, trained on MPRA data. CAGI
 elements}) were assayed in a saturation mutagenesis massively parallel reporter
 assay (MPRA). A linear regression model was fit to the data. This resulted in a
 \texttt{Confidence} score (a function of the associated $p$-value) and
-\texttt{Value} score for each SNV. Briefly, the \texttt{Confidence} represents
+\texttt{Value} score for each SNV\@. Briefly, the \texttt{Confidence} represents
 how sure we are that the SNV has an effect on gene expression and the
 \texttt{Value} represents the direction and magnitude (positive for activating,
 negative for repressing) of the effect (see Figures~\ref{fig:conf-value}
 and~\ref{fig:training-sort1}). The SNVs were classified into three classes: if
-the \texttt{Confidence} is less than .1, the \texttt{Direction} is 0; otherwise
+the \texttt{Confidence} is less than $.1$, the \texttt{Direction} is 0; otherwise
 the \texttt{Direction} is 1 (resp. -1) if \texttt{Value} $\ge 0$ (resp. $< 0$).
 
 \begin{figure}[ht]
@@ -129,7 +132,7 @@ distinguish these experiments by \texttt{TERT-GBM} and \texttt{TERT-HEK293T}.
 
 \subsection*{Prediction task}
 
-The data was split 25\% - 75\% into training and test data. Note that the
+The data was split 25\%--75\% into training and test data. Note that the
 training data was chosen to form contiguous chunks (see
 Figure~\ref{fig:training-sort1}).  The challenge required the participating
 teams to enter a prediction for each SNV in the test data. Each prediction
@@ -164,7 +167,7 @@ phastCons~\cite{SiepelEvolutionarilyconservedelements2005}, GerpN
 and GerpRS~\cite{CooperDistributionintensityconstraint2005} base-pair
 resolved conservation scores.
 
-Downloaded from UCSC~\cite{KuhnUCSCgenomebrowser2013}? \jr{AHH: can you check
+Downloaded from UCSC~\cite{KuhnUCSCgenomebrowser2013}? \jr{AHH\@: can you check
 where this came from?}
 
 
@@ -178,11 +181,11 @@ downloaded the tracks~\cite{RosenbloomENCODEDataUCSC2012} and created
 the signal at the bases 20bp on either side.
 
 \begin{table}[htp]
-\resizebox{\textwidth}{!} {
+\resizebox{\textwidth}{!} {\
 \begin{tabular}{rll}
   \\
   challenge  & ENCODE    & UCSC track \\
-  \hline
+  \toprule
   HepG2      & HepG2     & wgEncodeOpenChromDnaseHepg2BaseOverlapSignal \\
   HEL 92.1.7 & GM12878   & wgEncodeOpenChromDnaseGm12878BaseOverlapSignal \\
   HEK293T    & HEK293T   & wgEncodeOpenChromDnaseHek293tBaseOverlapSignal \\
@@ -212,7 +215,7 @@ networks.
 
 DanQ network~\cite{QuangDanQhybridconvolutional2016}.
 
-\jr{AHH: We need some more details here. If I let you know which network features I used,
+\jr{AHH\@: We need some more details here. If I let you know which network features I used,
 can you fill in the details of the network architectures and training?}
 
 
@@ -259,7 +262,7 @@ XGBoost~\cite{ChenXGBoostScalableTree2016},
 CatBoost~\cite{ProkhorenkovaCatBoostunbiasedboosting2017} and
 LightGBM~\cite{KeLightGBMHighlyEfficient2017}. We used the gradient boosting
 algorithms to regress the \texttt{Value} and \texttt{Confidence}, we also used
-them as classifers to predict the \texttt{Direction}. We tested different
+them as classifiers to predict the \texttt{Direction}. We tested different
 subsets of features in a 5-fold cross-validation set up to identify the best
 features.  Models were assessed by the cross-validated one against many
 area-under-precision-recall-curve (AUPRC). We stacked models in that we used
@@ -346,6 +349,6 @@ comments on parts of this work.
 %
 % Bibliography
 %
-\printbibliography
+\printbibliography{}
 
 \end{document}
