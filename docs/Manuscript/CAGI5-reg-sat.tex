@@ -4,9 +4,43 @@
 %
 % Hyphenation etc...
 %
-\usepackage{polyglossia}
-\setdefaultlanguage[variant=british]{english}
-\usepackage{csquotes}
+\usepackage{ifxetex}
+\ifxetex{}
+  \usepackage{fontspec}
+  \usepackage{csquotes}
+  \usepackage{polyglossia}
+  \setmainlanguage[variant=british]{english}
+\else
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage[UKenglish, english]{babel}
+  \usepackage{lmodern}
+\fi
+
+%
+% Colours
+\usepackage[table, dvipsnames]{xcolor}
+
+%
+% Math
+\usepackage{amsmath,amsfonts,amssymb,amsthm}
+\usepackage{mathtools}
+\usepackage{commath}  % derivatives, differentials
+\usepackage{bm}  % bold math
+
+%
+% Hyper-links
+\usepackage{hyperref}
+\hypersetup{colorlinks,
+            linkcolor={red!50!black},
+            citecolor={blue!50!black},
+            urlcolor={blue!80!black}}
+
+%
+% TODO
+\usepackage[textsize=small]{todonotes}
+\newcommand{\jr}[1]{\todo[author=JR, color=OliveGreen!20]{#1}}
+
 
 
 %
@@ -16,6 +50,7 @@
 \usepackage{xcolor}
 \usepackage{graphicx}
 \usepackage{booktabs}
+\usepackage[printonlyused, withpage]{acronym}
 % \usepackage[margin=0.7in]{geometry}
 % \usepackage[parfill]{parskip}
 % \usepackage[utf8]{inputenc}  % Not needed under xelatex
@@ -28,34 +63,16 @@
 
 
 %
-% Change tracking
-%
-\usepackage{changes}
-\definechangesauthor[name={John Reid}, color=orange]{JR}
-\newcommand{\jr}[1]{\added[id=JR]{[#1]}}
-
-
-%
 % Bibliography
 %
 \usepackage[
-    backend=biber,
-    % doi=false,
-    isbn=false,
-    url=false,
-    % style=apa,
-    % style=humanmutation,
-    sorting=none,
-    natbib=true,
-  ]{biblatex}
+  backend=biber,
+  doi=false,
+  isbn=false,
+  url=false,
+  natbib=true]{biblatex}
 \bibliography{CAGI5-reg-sat} % or
 % \addbibresource{<database>.<extension>}
-
-
-%
-% Command definitions
-%
-\newcommand{\todo}[1]{\textcolor{red}{TODO\@: #1}}
 
 
 %
@@ -64,14 +81,25 @@
 \usepackage{authblk}
 
 \author[1]{Alex Hawkins-Hooker}
-\author[2]{Henry Kenlay}
-\author[3, 4]{John E. Reid}
-\affil[1]{\footnotesize \todo{add}}
-\affil[2]{\footnotesize \todo{add}}
-\affil[3]{\footnotesize MRC Biostatistics Unit, University of Cambridge, Cambridge, UK}
-\affil[4]{\footnotesize Alan Turing Institute, British Library, London, UK}
+\author[1]{Henry Kenlay}
+\author[1, 2]{John E. Reid}
+\affil[1]{\footnotesize MRC Biostatistics Unit, University of Cambridge, Cambridge, UK}
+\affil[2]{\footnotesize Alan Turing Institute, British Library, London, UK}
 
 \title{A method for the CAGI 5 regulation saturation challenge}
+
+
+\acrodef{CAGI}{Critical Assessment of Genome Interpretation}
+\acrodef{SNV}{Single-Nucleotide Variant}
+\acrodef{GWAS}{Genome-Wide Association Study}
+\acrodefplural{GWAS}{Genome-Wide Association Studies}
+\acrodef{MPRA}{Massively Parallel Reporter Assay}
+\acrodef{eQTL}{Expression Quantitative Trait Locus}
+\acrodef{ROC}{Receiver Operating Characteristic}
+\acrodef{PR}{Precision-Recall}
+\acrodef{AUROC}{Area Under the ROC curve}
+\acrodef{AUPRC}{Area Under the Precision-Recall Curve}
+
 
 
 \begin{document}
@@ -79,21 +107,41 @@
 \maketitle
 
 
-\todo{Any suggestions for catchy names for our method (acronyms or otherwise)?}
+\todo[inline]{Any suggestions for catchy names for our method (acronyms or otherwise)?}
 
 
 \section*{Introduction}
 
 \subsection*{Biological context}
 
-GWAS\@. Most variants noncoding. Identify causal variants and mechanism.\ eQTL for
-fine-mapping. SNP linkage remains a problem.
+\acp{GWAS} have associated many \acp{SNV} with human traits and diseases.
+Unfortunately several issues hinder the translation of this knowledge into an
+understanding of the underlying biology and also into effective treatments of
+disease.  First, linkage disequilibrium of neighbouring \acp{SNV} hinders
+identification of the causal \acp{SNV}. Second, the majority of these \acp{SNV}
+are in loci that do not code for proteins. The prevalent assumption is that the
+causal mechanism is misregulation of gene expression. That is the regions they
+occupy are important for the regulation of gene expression and this function is
+disrupted by the \acp{SNV}.  However our understanding of how variation in
+non-coding loci affects cellular function is relatively limited. 
 
-MPRA are high-throughput assay to investigate internals of regulatory elements.
-Describe protocol.
+To move from identification of disease-associated \acp{SNV} to potential
+treatments the causal \acp{SNV} and their mechanisms must be identified.
+\ac{eQTL} assays are suitable for fine-mapping the causal \acp{SNV} and can
+associate underlying biological mechanisms with \acp{SNV} in linkage
+disequilibrium.  However linkage hinders the statistical power of these assays
+to identify the causal \ac{SNV}.
 
-We describe our method to estimate SNV effect sizes, trained on MPRA data. CAGI
-5 challenge.
+The genomic sequences of regulatory elements are assumed to encode most or all
+of their function.  Methods that could predict \ac{SNV} effects on gene
+expression based on sequence alone would help overcome the above mentioned
+issues with linkage disequilibrium.
+
+\acp{MPRA} are high-throughput assays to investigate internals of regulatory
+elements.  \todo[inline]{Describe protocol.}
+
+We describe our method to estimate \ac{SNV} effect sizes, trained on \ac{MPRA} data.
+\ac{CAGI} 5 challenge.
 
 
 \subsection*{Existing/similar methods}
@@ -101,17 +149,18 @@ We describe our method to estimate SNV effect sizes, trained on MPRA data. CAGI
 
 \subsection*{Data}
 
-17,500 SNVs in five enhancers and nine promoters (collectively \emph{regulatory
-elements}) were assayed in a saturation mutagenesis massively parallel reporter
-assay (MPRA). A linear regression model was fit to the data. This resulted in a
-\texttt{Confidence} score (a function of the associated $p$-value) and
-\texttt{Value} score for each SNV\@. Briefly, the \texttt{Confidence} represents
-how sure we are that the SNV has an effect on gene expression and the
-\texttt{Value} represents the direction and magnitude (positive for activating,
-negative for repressing) of the effect (see Figures~\ref{fig:conf-value}
+17,500 \acp{SNV} in five enhancers and nine promoters (collectively \emph{regulatory
+elements}) were assayed in a saturation mutagenesis \ac{MPRA}. A linear
+regression model was fit to the data. This resulted in a \texttt{Confidence}
+score (a monotonic function of the associated $p$-value) and \texttt{Value}
+score for each \ac{SNV}\@. Briefly, the \texttt{Confidence} represents how sure we
+are that the \ac{SNV} has an effect on gene expression and the \texttt{Value}
+represents the direction and magnitude (positive for activating, negative for
+repressing) of the effect (see Figures~\ref{fig:conf-value}
 and~\ref{fig:training-sort1}). The SNVs were classified into three classes: if
-the \texttt{Confidence} is less than $.1$, the \texttt{Direction} is 0; otherwise
-the \texttt{Direction} is 1 (resp. -1) if \texttt{Value} $\ge 0$ (resp. $< 0$).
+the \texttt{Confidence} is less than $.1$, the \texttt{Direction} is 0;
+otherwise the \texttt{Direction} is 1 (resp. -1) if \texttt{Value} $\ge 0$
+(resp. $< 0$).
 
 \begin{figure}[ht]
 \includegraphics[width=\textwidth]{fig-conf-value-scatter}
@@ -135,7 +184,7 @@ distinguish these experiments by \texttt{TERT-GBM} and \texttt{TERT-HEK293T}.
 The data was split 25\%--75\% into training and test data. Note that the
 training data was chosen to form contiguous chunks (see
 Figure~\ref{fig:training-sort1}).  The challenge required the participating
-teams to enter a prediction for each SNV in the test data. Each prediction
+teams to enter a prediction for each \ac{SNV} in the test data. Each prediction
 consisted of:
 \begin{itemize}
   \item A categorical prediction of the \texttt{Direction} of the effect (-1, 0 or 1).
@@ -144,8 +193,8 @@ consisted of:
   \item A prediction of the \texttt{Confidence}.
   \item The standard error of the predicted \texttt{Confidence}.
 \end{itemize}
-The assessment statistics were loosely hinted at in the challenge description
-but were far from well-defined.
+The assessment metrics were loosely hinted at in the challenge description
+but were not well-defined.
 
 
 \section*{Methods}
@@ -241,9 +290,9 @@ gradient boosting models estimating these generated features.
 \begin{figure}
 \includegraphics[width=\textwidth]{fig-stacking-x-validation}
 \caption{Predictions used for stacking coloured by regulatory element.
-  \emph{Top left}: Overall and regulatory element specific AUROC for prediction
+  \emph{Top left}: Overall and regulatory element specific \ac{AUROC} for prediction
   of \texttt{Direction} using \texttt{Value}.
-  \emph{Top right}: Overall and regulatory element specific AUPRC for prediction
+  \emph{Top right}: Overall and regulatory element specific \ac{AUPRC} for prediction
   of \texttt{Direction} using \texttt{Value}.
   \emph{Bottom left}: Predicted \texttt{Value} against actual \texttt{Value}.
   \emph{Bottom right}: Predicted \texttt{Confidence} against actual \texttt{Confidence}.
@@ -265,7 +314,7 @@ algorithms to regress the \texttt{Value} and \texttt{Confidence}, we also used
 them as classifiers to predict the \texttt{Direction}. We tested different
 subsets of features in a 5-fold cross-validation set up to identify the best
 features.  Models were assessed by the cross-validated one against many
-area-under-precision-recall-curve (AUPRC). We stacked models in that we used
+\ac{AUPRC}. We stacked models in that we used
 the prediction of cross-validated regression models of the \texttt{Value} and
 \texttt{Confidence} as features in the classification model for the
 \texttt{Direction}.
@@ -281,23 +330,22 @@ cross-validation that retained spatial dependencies. Briefly, we defined chunks
 as maximal contiguous regions in the training data for each regulatory element.
 
 As the validation metrics for the challenge were ill-defined and the challenge
-requires several predictions for each SNV across 3 categorical outcomes, we
+requires several predictions for each \ac{SNV} across 3 categorical outcomes, we
 chose to use a simplified task to evaluate models and hyperparameters. We used
 the absolute predicted \texttt{Value} as a predictor of the absolute
 \texttt{Direction}.  This is a binary classification task and permits analysis
-by receiver operating characteristic (ROC) and precision-recall (PR) curves. We
-used the area under the precision-recall curve (AUPRC) as our primary
+by \ac{ROC} and \ac{PR} curves. We used the \ac{AUPRC} as our primary
 evaluation criteria when performing cross-validation. We also calculated the
-area under the ROC curve (AUROC) as a statistic of interest.
+\ac{AUROC} as a statistic of interest.
 
-\todo{Precisely describe cross-validation scheme respecting structure of
+\todo[inline]{Precisely describe cross-validation scheme respecting structure of
 training loci.}
 
 
 
 \subsubsection*{Hyper-parameter Bayesian optimisation}
 
-\todo{Describe Bayesian optimisation scheme}
+\todo[inline]{Describe Bayesian optimisation scheme}
 
 
 \subsubsection*{Confidence standard error}
@@ -309,18 +357,18 @@ predictions to estimate the standard error.
 
 \subsection*{Variable importance}
 
-\todo{Discuss which features were important for prediction.}
+\todo[inline]{Discuss which features were important for prediction.}
 
 
 \section*{Discussion}
 
-\todo{Discuss why neural network features work so well}
+\todo[inline]{Discuss why neural network features work so well}
 
-\todo{Discuss how good results are}
+\todo[inline]{Discuss how good results are}
 
-\todo{Which regulatory elements were easier/harder?}
+\todo[inline]{Which regulatory elements were easier/harder?}
 
-\todo{Future work/extensions}
+\todo[inline]{Future work/extensions}
 
 
 \section*{Contributions}
@@ -340,7 +388,7 @@ available on request.
 We are grateful to the organizers of the CAGI 5 experiment for running the
 regulation saturation challenge. We thank Martin Kircher, Fumitaka Inoue,
 Chenling Xiong, Beth Martin, Nadav Ahituv, and Jay Shendure for providing the
-MPRA data for this challenge. We also thank members of the MRC Biostatistics
+\ac{MPRA} data for this challenge. We also thank members of the MRC Biostatistics
 Unit for providing helpful feedback on the method, in particular Elena
 Vigorito, Lorenz Wernisch, Paul Newcombe, and Paul Kirk gave insightful
 comments on parts of this work.
